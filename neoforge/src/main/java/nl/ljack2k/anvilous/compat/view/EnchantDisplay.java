@@ -1,4 +1,4 @@
-package nl.ljack2k.anvilous.compat.jei;
+package nl.ljack2k.anvilous.compat.view;
 
 import net.minecraft.core.Holder;
 import net.minecraft.resources.ResourceLocation;
@@ -20,11 +20,11 @@ import java.util.List;
  * deserves an answer rather than a slot that cycles. The tools cycle instead, since the
  * price does not depend on which one it goes on.
  */
-record EnchantDisplay(ResourceLocation id, SmithingEnchantRecipe recipe,
+public record EnchantDisplay(ResourceLocation id, SmithingEnchantRecipe recipe,
                       Holder<Enchantment> enchantment, int level,
                       ItemStack book, List<ItemStack> tools, List<ItemStack> enchanted) {
 
-    static List<EnchantDisplay> explode(SmithingEnchantRecipe recipe,
+    public static List<EnchantDisplay> explode(SmithingEnchantRecipe recipe,
                                         Holder<Enchantment> enchantment,
                                         ResourceLocation id) {
         List<ItemStack> tools = new ArrayList<>();
@@ -62,11 +62,11 @@ record EnchantDisplay(ResourceLocation id, SmithingEnchantRecipe recipe,
     }
 
     /** Items this material costs at this display's level, which the slot shows as a count. */
-    int cost(EnchantMaterial material) {
+    public int cost(EnchantMaterial material) {
         return material.costFor(this.level);
     }
 
-    EnchantMaterial materialFor(ItemStack stack) {
+    public EnchantMaterial materialFor(ItemStack stack) {
         return this.recipe.materials().stream()
                 .filter(material -> material.test(stack))
                 .findFirst()

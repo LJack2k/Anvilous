@@ -1,4 +1,4 @@
-package nl.ljack2k.anvilous.compat.jei;
+package nl.ljack2k.anvilous.compat.view;
 
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
@@ -15,13 +15,13 @@ import java.util.List;
  * property of the tool, so each one gets its own entry. Looking up a diamond pickaxe then
  * finds the diamond pickaxe's repair rather than "pickaxes, somewhere in here".
  */
-record RepairDisplay(ResourceLocation id, SmithingRepairRecipe recipe,
+public record RepairDisplay(ResourceLocation id, SmithingRepairRecipe recipe,
                      ItemStack damaged, ItemStack repaired) {
 
     /** How worn the example tool is drawn. Nearly spent, so the repair is the obvious part. */
     private static final int WORN_PERCENT = 90;
 
-    static List<RepairDisplay> explode(SmithingRepairRecipe recipe, ResourceLocation id) {
+    public static List<RepairDisplay> explode(SmithingRepairRecipe recipe, ResourceLocation id) {
         List<RepairDisplay> displays = new ArrayList<>();
         for (ItemStack base : recipe.base().getItems()) {
             ItemStack damaged = base.copy();
@@ -42,24 +42,24 @@ record RepairDisplay(ResourceLocation id, SmithingRepairRecipe recipe,
     }
 
     /** Items of this material one craft may take, which is what the slot shows as a count. */
-    int perCraft(RepairMaterial material) {
+    public int perCraft(RepairMaterial material) {
         return Math.min(this.forFullRepair(material),
                 this.recipe.maxPerCraft().orElse(Integer.MAX_VALUE));
     }
 
     /** Items of this material a repair from empty to full takes. */
-    int forFullRepair(RepairMaterial material) {
+    public int forFullRepair(RepairMaterial material) {
         // Ceiling division on whole percent, matching the recipe's own rounding.
         return Math.max(1, (100 + material.percent() - 1) / material.percent());
     }
 
     /** Whether a full repair needs more than one craft, which only max_per_craft can cause. */
-    boolean takesSeveralCrafts(RepairMaterial material) {
+    public boolean takesSeveralCrafts(RepairMaterial material) {
         return this.perCraft(material) < this.forFullRepair(material);
     }
 
     /** The material entry a displayed stack belongs to, for the live cost line. */
-    RepairMaterial materialFor(ItemStack stack) {
+    public RepairMaterial materialFor(ItemStack stack) {
         return this.recipe.materialFor(stack).orElse(this.recipe.materials().getFirst());
     }
 }

@@ -238,12 +238,13 @@ public final class DevHarness {
 
         // Opens the client's recipe browser on one of our categories, or on everything an
         // item takes part in - so a category can be screenshotted without taking the mouse.
-        root.then(Commands.literal("jei")
+        // Whichever viewer the run was started with answers; see ClientRecipeBrowser.
+        root.then(Commands.literal("browse")
                 .then(Commands.argument("category", ResourceLocationArgument.id())
                         .executes(ctx -> showRecipes(ctx.getSource(), false,
                                 ResourceLocationArgument.getId(ctx, "category")))));
 
-        root.then(Commands.literal("jei_item")
+        root.then(Commands.literal("browse_item")
                 .then(Commands.argument("item", ResourceLocationArgument.id())
                         .executes(ctx -> showRecipes(ctx.getSource(), true,
                                 ResourceLocationArgument.getId(ctx, "item")))));

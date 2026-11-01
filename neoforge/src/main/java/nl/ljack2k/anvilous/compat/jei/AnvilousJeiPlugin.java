@@ -9,25 +9,14 @@ import mezz.jei.api.registration.IRecipeRegistration;
 import mezz.jei.api.constants.VanillaTypes;
 import mezz.jei.api.recipe.RecipeIngredientRole;
 import mezz.jei.api.runtime.IJeiRuntime;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.multiplayer.ClientLevel;
-import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.item.crafting.RecipeHolder;
-import net.minecraft.world.item.crafting.RecipeType;
-import net.minecraft.world.item.crafting.SmithingRecipe;
-import net.minecraft.world.item.enchantment.Enchantment;
 import nl.ljack2k.anvilous.Anvilous;
-import nl.ljack2k.anvilous.recipe.SmithingCombineRecipe;
-import nl.ljack2k.anvilous.recipe.SmithingEnchantRecipe;
-import nl.ljack2k.anvilous.recipe.SmithingRepairRecipe;
+import nl.ljack2k.anvilous.compat.view.SmithingDisplays;
 
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -115,49 +104,15 @@ public class AnvilousJeiPlugin implements IModPlugin {
 
     @Override
     public void registerRecipes(IRecipeRegistration registration) {
-        // Our recipes are datapack-driven and synced, so they only exist once a world is
-        // joined - which is also when JEI asks for them.
-        ClientLevel level = Minecraft.getInstance().level;
-        if (level == null) {
-            return;
-        }
+        SmithingDisplays displays = SmithingDisplays.collect();
 
-        List<RepairDisplay> repairs = new ArrayList<>();
-        List<CombineDisplay> combines = new ArrayList<>();
-        List<EnchantDisplay> enchants = new ArrayList<>();
-
-        for (RecipeHolder<SmithingRecipe> holder : level.getRecipeManager().getAllRecipesFor(RecipeType.SMITHING)) {
-            ResourceLocation id = holder.id();
-            switch (holder.value()) {
-                case SmithingRepairRecipe repair -> repairs.addAll(RepairDisplay.explode(repair, id));
-                case SmithingCombineRecipe combine -> combines.addAll(CombineDisplay.explode(combine, id));
-                case SmithingEnchantRecipe enchant -> {
-                    Holder<Enchantment> enchantment = level.registryAccess()
-                            .lookupOrThrow(Registries.ENCHANTMENT)
-                            .listElements()
-                            .filter(candidate -> candidate.key().location().equals(enchant.enchantment()))
-                            .findFirst()
-                            .map(reference -> (Holder<Enchantment>) reference)
-                            .orElse(null);
-                    // A recipe naming an enchantment this pack does not have is inert in
-                    // game, so it has nothing to show here either.
-                    if (enchantment != null) {
-                        enchants.addAll(EnchantDisplay.explode(enchant, enchantment, id));
-                    }
-                }
-                default -> {
-                    // Vanilla's own smithing recipes, which JEI already shows itself.
-                }
-            }
-        }
-
-        registration.addRecipes(RepairCategory.TYPE, repairs);
-        registration.addRecipes(CombineCategory.TYPE, combines);
-        registration.addRecipes(EnchantCategory.TYPE, enchants);
+        registration.addRecipes(RepairCategory.TYPE, displays.repairs());
+        registration.addRecipes(CombineCategory.TYPE, displays.combines());
+        registration.addRecipes(EnchantCategory.TYPE, displays.enchants());
 
         // Also the only way to tell whether something OTHER than JEI loaded this plugin:
         // a viewer with its own JEI compatibility layer calls the same method.
-        Anvilous.LOGGER.info("Recipe viewer plugin: {} repair, {} combining, {} enchanting",
-                repairs.size(), combines.size(), enchants.size());
+        Anvilous.LOGGER.info("JEI plugin: {} repair, {} combining, {} enchanting",
+                displays.repairs().size(), displays.combines().size(), displays.enchants().size());
     }
 }

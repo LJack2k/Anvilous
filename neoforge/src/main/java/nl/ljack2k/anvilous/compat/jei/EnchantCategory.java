@@ -16,6 +16,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.enchantment.Enchantment;
 import nl.ljack2k.anvilous.Anvilous;
+import nl.ljack2k.anvilous.compat.view.EnchantDisplay;
 import nl.ljack2k.anvilous.recipe.EnchantMaterial;
 
 import java.util.ArrayList;

@@ -45,3 +45,13 @@ type = "optional"
 versionRange = "${jei_version_range}"
 ordering = "NONE"
 side = "CLIENT"
+
+# The same bargain as JEI's: the EMI plugin class is loaded only by EMI itself,
+# by its own annotation, and the range is here so a too-old EMI says so instead
+# of failing inside its plugin loader.
+[[dependencies.${mod_id}]]
+modId = "emi"
+type = "optional"
+versionRange = "${emi_version_range}"
+ordering = "NONE"
+side = "CLIENT"

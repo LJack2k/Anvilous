@@ -1,4 +1,4 @@
-package nl.ljack2k.anvilous.compat.jei;
+package nl.ljack2k.anvilous.compat.view;
 
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
@@ -14,12 +14,12 @@ import java.util.List;
  * arithmetic is visible: two halves and the bonus come out better than new ever was, which
  * is the whole reason the anvil has this trick.
  */
-record CombineDisplay(ResourceLocation id, SmithingCombineRecipe recipe,
+public record CombineDisplay(ResourceLocation id, SmithingCombineRecipe recipe,
                       ItemStack tool, ItemStack sacrifice, ItemStack result) {
 
     private static final int WORN_PERCENT = 60;
 
-    static List<CombineDisplay> explode(SmithingCombineRecipe recipe, ResourceLocation id) {
+    public static List<CombineDisplay> explode(SmithingCombineRecipe recipe, ResourceLocation id) {
         List<CombineDisplay> displays = new ArrayList<>();
         for (ItemStack base : recipe.base().getItems()) {
             ItemStack tool = base.copy();

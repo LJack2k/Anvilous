@@ -14,6 +14,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import nl.ljack2k.anvilous.Anvilous;
+import nl.ljack2k.anvilous.compat.view.CombineDisplay;
 
 import java.util.List;
 
