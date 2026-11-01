@@ -239,15 +239,21 @@ express yet.
 
 `gradlew build` produces the jar under `neoforge/build/libs/`.
 
-To have each build land in a launcher instance as well, create a `local.properties`
-next to `settings.gradle` (it is gitignored) with the instance's game directory:
+To have each build land in launcher instances as well, create a `local.properties`
+next to `settings.gradle` (it is gitignored) with their game directories, comma-separated:
 
 ```properties
-prism_instance=C:/Users/you/AppData/Roaming/PrismLauncher/instances/Anvilous Dev/minecraft
+prism_instance=C:/Users/you/.../instances/Anvilous Dev/minecraft, C:/Users/you/.../instances/1.21.1 JEI/minecraft
 ```
 
 `build` then runs `installToPrism`, which clears out older `Anvilous-*.jar` files and copies
-the new one in. Without the property the task is never registered, so the build is unchanged.
+the new one into every instance listed — a bare one for the mod on its own, a modpack-like
+one for whether tags pick up other mods' materials, one per recipe viewer. Each also gets its
+own task (`installToPrismAnvilousDev` and so on) for refreshing just that one. Without the
+property none of them is registered, so the build is unchanged.
+
+A jar in only one instance while the others go stale is worse than no jar at all: it still
+looks like a test.
 
 ### Running a viewer
 

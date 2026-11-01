@@ -243,14 +243,33 @@ if (localProperties.exists()) {
 }
 
 if (project.hasProperty('prism_instance')) {
-    tasks.register('installToPrism', Copy) {
-        description = 'Copies the built jar into the local Prism Launcher instance.'
-        var modsDir = file("${prism_instance}/mods")
-        // Clear out jars from earlier mod_versions, or they pile up and the
-        // game loads two copies of the mod.
-        doFirst { delete fileTree(modsDir) { include "${mod_name}-*.jar" } }
-        from tasks.named('jar')
-        into modsDir
+    // Comma-separated, because one test instance is never enough for long: a bare dev
+    // instance for the mod on its own, a modpack-like one for whether tags pick up other
+    // mods' materials, one per recipe viewer. A jar copied into only one of them and left
+    // to go stale is worse than no jar at all - it looks like a test and is not.
+    var instances = prism_instance.toString()
+            .split(',')
+            .collect { it.trim() }
+            .findAll { !it.isEmpty() }
+
+    var perInstance = instances.collect { path ->
+        var modsDir = file("${path}/mods")
+        // Named after the instance folder, so a single one can be run on its own and
+        // `gradlew tasks` says which is which.
+        var label = modsDir.parentFile.parentFile.name.replaceAll('[^A-Za-z0-9]', '')
+        tasks.register("installToPrism${label}", Copy) {
+            description = "Copies the built jar into the Prism instance at ${path}."
+            // Clear out jars from earlier mod_versions, or they pile up and the
+            // game loads two copies of the mod.
+            doFirst { delete fileTree(modsDir) { include "${mod_name}-*.jar" } }
+            from tasks.named('jar')
+            into modsDir
+        }
+    }
+
+    tasks.register('installToPrism') {
+        description = 'Copies the built jar into every Prism instance named by prism_instance.'
+        dependsOn perInstance
     }
     tasks.named('build') { finalizedBy 'installToPrism' }
 }
