@@ -3,7 +3,7 @@
 Repair your gear at the **smithing table**, with materials and amounts a datapack decides —
 and leave the anvil's experience bill behind.
 
-**Minecraft 1.21.1 · NeoForge**
+**Minecraft 1.21.1 · NeoForge · client and server**
 
 > **Status: in design.** Nothing is built yet. This README is the agreed spec; the format
 > below is what the mod is being written against.
@@ -23,6 +23,9 @@ doesn't care.
 
 > **On its own it does nothing.** No recipes ship enabled by default beyond the starter pack
 > below — a pack decides which tools can be repaired, by what, and for how much.
+
+Both sides need the mod: recipes are synced to every client, and the smithing table filters
+its input slots against the client's own recipe list.
 
 ## Recipes
 
