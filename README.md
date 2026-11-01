@@ -194,13 +194,46 @@ decided by us, so what they do is move vanilla's own prices to a block that does
 experience and does not get more expensive the more you use it.
 
 A pack replaces any of them by shipping a file at the same path: `data/anvilous/recipe/diamond_pickaxe.json`
-in a datapack wins over the mod's copy. There is no way to delete a recipe from JSON, but one
-whose `base` matches nothing is inert, so overriding with a recipe for an item that does not
-exist is how a pack turns one off.
+in a datapack wins over the built-in copy. It needs no thought about load order — the three
+sets are built-in datapacks sitting at the bottom of the stack, so anything else beats them.
 
 Both sets come out of generators in the dev harness — `/anvilous dump_repair <percent>` and
 `/anvilous dump_enchant` — so a pack with its own tiers regenerates them rather than editing
 a hundred files, and run inside a modpack they cover its modded tools and enchantments too.
+
+### Starting from nothing
+
+The recipes are content; the mod is the engine. The three recipe types, the smithing-table
+behaviour and the JEI/EMI/REI plugins all work with none of the built-ins loaded, which is what
+a pack with its own progression actually wants — our lapis/amethyst/pearl/powder ladder would
+cut straight across whatever tiering it built.
+
+So each set is a datapack that can be switched off, in `config/anvilous-common.toml`:
+
+```toml
+[built_in_recipes]
+	repair = true
+	combine = true
+	enchant = false
+```
+
+Three switches rather than one, because the three are not equally opinionated. Repair and
+combine are vanilla's own numbers read back out of the registry — the material its anvil
+already accepts, the quarter it already restores, the pairs it already allows. Enchanting
+prices from `anvil_cost` and then picks a material per band, and that second half is a balance
+decision we made up. A pack can keep the first two and drop the third.
+
+Ship that file with the modpack and every world its players make starts the way you meant it
+to. A single world can drop a set on its own instead, either with
+`/datapack disable "mod/anvilous:defaults_enchant"` or from the Datapacks button on the
+world-creation screen, where all three are listed by name.
+
+Turning a set off in the config on a world that already had it on leaves one `Missing data pack`
+warning in the log, because the world remembers the pack by name. It is harmless, and a world
+made after the switch never sees it.
+
+Switching a set off is not the same as overriding its recipes one at a time. There is no way to
+delete a recipe from JSON at all — that is the whole reason the switches exist.
 
 ### Repair and combining — 127 recipes
 

@@ -1,7 +1,7 @@
 # Store page copy
 
 The text for the CurseForge and Modrinth project pages. Kept here so it is versioned
-alongside the logos and cannot quietly drift from what the mod actually does — the pages
+alongside the logos and cannot quietly drift from what the mod actually does â the pages
 themselves are edited by hand, so update this first and paste it across.
 
 ---
@@ -10,7 +10,7 @@ themselves are edited by hand, so update this first and paste it across.
 
 > Repair, combine and enchant at the smithing table, paid for in materials instead of experience.
 
-*(109 characters — Modrinth allows 256, CurseForge is happier short.)*
+*(109 characters â Modrinth allows 256, CurseForge is happier short.)*
 
 ---
 
@@ -21,7 +21,7 @@ The rest of this file is the page itself. Paste from the line below.
 ---
 
 Anvilous moves repairing, combining and enchanting off the anvil and onto the **smithing
-table**, where they cost materials instead of experience — and where nothing gets more
+table**, where they cost materials instead of experience â and where nothing gets more
 expensive the more you use it.
 
 No new blocks, no new menus. It uses the vanilla smithing table, so it cannot collide with
@@ -34,7 +34,7 @@ whatever else your pack installs.
 | Repair with material units | Yes, at the smithing table |
 | Combine two of the same item | Yes |
 | Apply an enchanted book | Yes |
-| Rename | No — the smithing table has no text field |
+| Rename | No â the smithing table has no text field |
 
 **Repairing** takes a worn tool and a material, and restores a set percentage of the item's
 maximum durability per material item. It takes only as many as the repair needs: drop a stack
@@ -42,7 +42,7 @@ of diamonds beside a nearly broken pickaxe and it comes out full having spent fo
 same beside one a single point from full and it spends one.
 
 **Combining** adds two worn copies of an item together, plus vanilla's 12% bonus, and merges
-their enchantments — the only repair some items have.
+their enchantments â the only repair some items have.
 
 **Enchanting** applies a book to a tool for a price in materials. The price is per level, so
 Sharpness I and Sharpness V do not cost the same thing.
@@ -52,17 +52,18 @@ that eventually produces *Too Expensive!* is reset rather than raised.
 
 ## It works out of the box
 
-169 recipes ship enabled, covering **every damageable item and every enchantment in vanilla**.
+169 recipes ship enabled as three built-in datapacks, covering **every damageable item and
+every enchantment in vanilla**.
 
 They are not a new balance. Every number in them was read out of the game rather than decided
 by us:
 
 - Each repair uses the material vanilla's own anvil already accepts for that item, at 25% per
-  unit — the same quarter an anvil restores. Nine items have no material repair at all (bows,
+  unit â the same quarter an anvil restores. Nine items have no material repair at all (bows,
   crossbows, fishing rods, shears, tridents, flint and steel, brushes, the two sticks), so for
   those combining is the only route, exactly as the anvil treats them.
 - Every damageable item can be combined, not only those nine, because the anvil combines any
-  two of the same item — and combining is what you have when you own the tool and not the
+  two of the same item â and combining is what you have when you own the tool and not the
   material, like a damaged pickaxe out of a chest before you have found any diamonds.
 - Each enchantment is priced from its `anvil_cost`: the levels an anvil bills per level of the
   enchantment, halved for a book. One material item per experience level vanilla would have
@@ -98,14 +99,20 @@ Materials can be named by tag or by item and mixed freely in one recipe, each wi
 percentage. `anvilous:smithing_combine` and `anvilous:smithing_enchant` work the same way;
 the README on GitHub documents every field.
 
+And a pack can start from nothing. The built-ins are three datapacks — repair, combine and
+enchanting — each switchable off in `config/anvilous-common.toml`, so a pack ships the engine
+with none of our balance, or keeps repair and combining (which are vanilla's own numbers) while
+dropping the enchanting ladder (which is an opinion we invented). A single world can drop one
+with `/datapack disable` or from the world-creation screen instead.
+
 ## Recipe viewers
 
 Recipes show up in **JEI**, **EMI** and **REI**, each through a plugin of its own. None is
-required — install any, all, or none.
+required â install any, all, or none.
 
 ## Requirements
 
-**Minecraft 1.21.1 · NeoForge · needed on both client and server.**
+**Minecraft 1.21.1 Â· NeoForge Â· needed on both client and server.**
 
 Recipes are synced to every client, and the smithing table filters its input slots against
 the client's own recipe list, so a client without the mod cannot use it. In single player

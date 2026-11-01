@@ -272,12 +272,16 @@ public final class DevHarness {
                 .filter(item -> new ItemStack(item).isDamageableItem())
                 .toList();
 
-        Path out = FMLPaths.GAMEDIR.get().resolve("anvilous-generated/data/anvilous/recipe");
+        // Mirrors the jar layout, so regenerating is a directory copy per pack rather than
+        // a sort by filename prefix.
+        Path combineOut = generated("defaults_combine");
+        Path repairOut = generated("defaults_repair");
         List<String> noMaterial = new ArrayList<>();
         int written = 0;
 
         try {
-            Files.createDirectories(out);
+            Files.createDirectories(combineOut);
+            Files.createDirectories(repairOut);
             for (Item item : damageable) {
                 ItemStack tool = new ItemStack(item);
                 List<ResourceLocation> materials = BuiltInRegistries.ITEM.stream()
@@ -288,7 +292,7 @@ public final class DevHarness {
                 ResourceLocation id = BuiltInRegistries.ITEM.getKey(item);
 
                 // Prefixed, because an item now has both and they cannot share a path.
-                Files.writeString(out.resolve("combine_" + id.getPath() + ".json"), """
+                Files.writeString(combineOut.resolve("combine_" + id.getPath() + ".json"), """
                         {
                           "type": "anvilous:smithing_combine",
                           "base": { "item": "%s" },
@@ -316,7 +320,7 @@ public final class DevHarness {
                 }
                 json.append("  ],\n  \"keep_enchantments\": true,\n  \"repair_cost\": \"reset\"\n}\n");
 
-                Files.writeString(out.resolve(id.getPath() + ".json"), json.toString());
+                Files.writeString(repairOut.resolve(id.getPath() + ".json"), json.toString());
                 written++;
             }
         } catch (IOException e) {
@@ -330,8 +334,21 @@ public final class DevHarness {
         int finalWritten = written;
         source.sendSuccess(() -> Component.literal(
                 damageable.size() + " damageable items, " + finalWritten + " recipes written to "
-                        + out + ", " + noMaterial.size() + " have no material repair"), false);
+                        + generatedRoot() + ", " + noMaterial.size() + " have no material repair"), false);
         return 1;
+    }
+
+    /** Everything the dump commands write, under one folder in the run directory. */
+    private static Path generatedRoot() {
+        return FMLPaths.GAMEDIR.get().resolve("anvilous-generated");
+    }
+
+    /**
+     * Where one generated pack's recipes go, laid out exactly as they sit in the jar so that
+     * refreshing the built-ins is a copy of the folder rather than a sort by filename.
+     */
+    private static Path generated(String pack) {
+        return generatedRoot().resolve(pack).resolve("data/anvilous/recipe");
     }
 
     /** A worn copy of an item, with {@code percentLeft} of its durability remaining. */
@@ -495,7 +512,7 @@ public final class DevHarness {
      */
     private static int dumpEnchant(CommandSourceStack source) {
         var registry = source.registryAccess().lookupOrThrow(Registries.ENCHANTMENT);
-        Path out = FMLPaths.GAMEDIR.get().resolve("anvilous-generated/data/anvilous/recipe");
+        Path out = generated("defaults_enchant");
         List<String> skipped = new ArrayList<>();
         int written = 0;
 
