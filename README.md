@@ -36,7 +36,7 @@ One file per tool or tool group, in `data/<namespace>/recipe/`:
 ```json
 {
   "type": "anvilous:smithing_repair",
-  "base": { "tag": "c:tools/pickaxes" },
+  "base": { "tag": "minecraft:pickaxes" },
   "materials": [
     { "tag":  "c:ingots/iron",             "percent": 25 },
     { "item": "minecraft:diamond",         "percent": 50 },
@@ -53,11 +53,24 @@ One file per tool or tool group, in `data/<namespace>/recipe/`:
 | --- | --- |
 | `base` | The item being repaired. A `tag` or an `item`. |
 | `materials` | A list; each entry is a `tag` **or** an `item`, with its own `percent`. Tags and items can be mixed freely in one recipe. |
-| `percent` | Durability restored **per material item**, as a percentage of the tool's maximum. A 1562-durability diamond pickaxe at 100/1562, repaired with a 50% material, comes out at 881/1562. Flat, predictable, independent of how damaged the tool is. |
+| `percent` | Durability restored **per material item**, as a percentage of the tool's maximum. A diamond pickaxe (1561) at 100 damage, repaired with a 25% material, gets 391 back. Flat, predictable, independent of how damaged the tool is. |
 | `max_per_craft` | *Optional.* The most material items one craft may take. Leave it out and a craft does as much as the materials allow. Set it only to make a full repair take several crafts. |
 | `keep_enchantments` | Keeps enchantments and components on the repaired item. Normally `true` — it is the reason this mod exists. |
 | `repair_cost` | What to do with the item's hidden anvil-use counter: `reset`, `keep` or `increase`. See below. |
 | `template` | *Optional.* An item required in the template slot, if a pack wants the repair gated behind something. Omit it and the slot stays empty. |
+
+### On tags
+
+Prefer a tag to an item wherever one exists. Modded materials are unified by tag, so
+`c:ingots/brass` covers every mod's brass ingot at once and keeps working when a pack swaps
+which mod provides it — a recipe keeps its tag rather than resolving it to items, so it picks
+up whatever is installed at runtime.
+
+Watch the namespace, though. The `c:` convention covers materials (`c:ingots/iron`,
+`c:gems/diamond`) and a handful of tools (`c:tools/bow`, `c:tools/shield`), but the common
+tool classes are **vanilla** tags in 1.21.1: `minecraft:pickaxes`, `minecraft:axes`,
+`minecraft:shovels`, `minecraft:hoes`, `minecraft:swords`. There is no `c:tools/pickaxes`,
+and a recipe naming a tag that does not exist simply never matches — no error, no warning.
 
 ### What a repair costs
 
