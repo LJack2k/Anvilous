@@ -32,3 +32,16 @@ type = "required"
 versionRange = "${minecraft_version_range}"
 ordering = "NONE"
 side = "BOTH"
+
+# --- Optional ---
+# Not needed, and the mod never mentions JEI unless JEI itself loads the plugin
+# class by its annotation. The entry is here only for the version: the plugin is
+# compiled against the API below and uses calls that older builds do not have, so
+# without a range a too-old JEI would fail inside its own plugin loader with a
+# NoSuchMethodError instead of a sentence anyone can read.
+[[dependencies.${mod_id}]]
+modId = "jei"
+type = "optional"
+versionRange = "${jei_version_range}"
+ordering = "NONE"
+side = "CLIENT"

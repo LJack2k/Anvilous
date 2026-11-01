@@ -33,15 +33,32 @@ repositories {
             includeGroupByRegex 'net\\.mezzdev.*'
         }
     }
+    maven {
+        name = 'Sleeping Town'
+        url = 'https://repo.sleeping.town/'
+        content { includeGroup 'dev.emi' }
+    }
     flatDir { dirs 'libs' }
 }
 
+// Which recipe viewer the dev runs start with: jei (default), emi, or both. EMI carries its
+// own JEI compatibility layer, so running with emi alone is how we find out whether our JEI
+// plugin is loaded by something that is not JEI - which no amount of documentation settled.
+//   gradlew :neoforge:runClientJoin -Precipe_viewer=emi
+var recipeViewer = project.findProperty('recipe_viewer') ?: 'jei'
+
 dependencies {
-    // Compile against the API only, so the plugin can be written; at runtime the whole of
-    // JEI is on the dev classpath so it can be looked at. Neither is a dependency of the
-    // mod - the plugin class is never touched unless JEI itself loads it.
+    // Compile against the API only, so the plugin can be written; at runtime a whole viewer
+    // is on the dev classpath so it can be looked at. Neither is a dependency of the mod -
+    // the plugin class is never touched unless a viewer loads it.
     compileOnly "mezz.jei:jei-${minecraft_version}-neoforge-api:${jei_version}"
-    runtimeOnly "mezz.jei:jei-${minecraft_version}-neoforge:${jei_version}"
+
+    if (recipeViewer in ['jei', 'both']) {
+        runtimeOnly "mezz.jei:jei-${minecraft_version}-neoforge:${jei_version}"
+    }
+    if (recipeViewer in ['emi', 'both']) {
+        runtimeOnly "dev.emi:emi-neoforge:${emi_version}"
+    }
 }
 
 neoForge {
@@ -112,7 +129,8 @@ tasks.named('processResources', ProcessResources).configure {
         mod_license             : mod_license,
         mod_version             : mod_version,
         mod_authors             : mod_authors,
-        mod_description         : mod_description
+        mod_description         : mod_description,
+        jei_version_range       : jei_version_range
     ]
     inputs.properties replaceProperties
 

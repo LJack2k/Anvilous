@@ -154,5 +154,10 @@ public class AnvilousJeiPlugin implements IModPlugin {
         registration.addRecipes(RepairCategory.TYPE, repairs);
         registration.addRecipes(CombineCategory.TYPE, combines);
         registration.addRecipes(EnchantCategory.TYPE, enchants);
+
+        // Also the only way to tell whether something OTHER than JEI loaded this plugin:
+        // a viewer with its own JEI compatibility layer calls the same method.
+        Anvilous.LOGGER.info("Recipe viewer plugin: {} repair, {} combining, {} enchanting",
+                repairs.size(), combines.size(), enchants.size());
     }
 }
