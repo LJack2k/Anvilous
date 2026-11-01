@@ -1,13 +1,17 @@
 package nl.ljack2k.anvilous.dev;
 
+import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.inventory.ContainerLevelAccess;
+import net.minecraft.world.inventory.SmithingMenu;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.GameRules;
@@ -122,6 +126,18 @@ public final class DevHarness {
             return 1;
         }));
 
+        // The consumption rule lives in SmithingMenu.onTake, which a player normally
+        // reaches by clicking the result slot. This drives that exact path - a real
+        // SmithingMenu, a real onTake - so the result is the shipped behaviour and not
+        // a reimplementation of it that could agree with a bug.
+        root.then(Commands.literal("simulate")
+                .then(Commands.argument("damage", IntegerArgumentType.integer(0))
+                        .then(Commands.argument("materials", IntegerArgumentType.integer(1, 64))
+                                .executes(ctx -> simulate(
+                                        ctx.getSource(),
+                                        IntegerArgumentType.getInteger(ctx, "damage"),
+                                        IntegerArgumentType.getInteger(ctx, "materials"))))));
+
         root.then(Commands.literal("shot").executes(ctx -> {
             PacketDistributor.sendToAllPlayers(new ScreenshotRequestPayload());
             ctx.getSource().sendSuccess(
@@ -141,5 +157,58 @@ public final class DevHarness {
         }));
 
         event.getDispatcher().register(root);
+    }
+
+    /**
+     * Runs one repair through a real {@link SmithingMenu} and reports what it cost.
+     *
+     * <p>Puts a diamond pickaxe at {@code damage} in the base slot and {@code materials}
+     * diamonds in the addition slot, asks the menu to build its result, then takes that
+     * result exactly as clicking it would. What is left in the addition slot afterwards is
+     * the consumption rule, measured rather than assumed.
+     */
+    private static int simulate(CommandSourceStack source, int damage, int materials)
+            throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+        ServerPlayer player = source.getPlayerOrException();
+        ServerLevel level = player.serverLevel();
+        BlockPos pos = player.blockPosition();
+
+        // The menu's stillValid check wants a real smithing table under the access.
+        if (!level.getBlockState(pos).is(Blocks.SMITHING_TABLE)) {
+            level.setBlockAndUpdate(pos, Blocks.SMITHING_TABLE.defaultBlockState());
+        }
+
+        ItemStack tool = new ItemStack(Items.DIAMOND_PICKAXE);
+        tool.setDamageValue(Math.min(damage, tool.getMaxDamage()));
+        int startDamage = tool.getDamageValue();
+
+        SmithingMenu menu = new SmithingMenu(1, player.getInventory(),
+                ContainerLevelAccess.create(level, pos));
+        menu.getSlot(SmithingMenu.BASE_SLOT).set(tool);
+        menu.getSlot(SmithingMenu.ADDITIONAL_SLOT).set(new ItemStack(Items.DIAMOND, materials));
+        menu.createResult();
+
+        ItemStack result = menu.getSlot(SmithingMenu.RESULT_SLOT).getItem();
+        if (result.isEmpty()) {
+            source.sendSuccess(() -> Component.literal(
+                    "damage " + startDamage + " + " + materials + " diamond(s) -> NO RECIPE MATCH"), false);
+            return 0;
+        }
+
+        // This is the click.
+        menu.getSlot(SmithingMenu.RESULT_SLOT).onTake(player, result);
+
+        int endDamage = result.getDamageValue();
+        int left = menu.getSlot(SmithingMenu.ADDITIONAL_SLOT).getItem().getCount();
+        int used = materials - left;
+        int restored = startDamage - endDamage;
+
+        source.sendSuccess(() -> Component.literal(
+                "damage " + startDamage + " + " + materials + " diamond(s)"
+                        + " -> damage " + endDamage
+                        + " | restored " + restored
+                        + " | consumed " + used
+                        + " | repair_cost " + result.getOrDefault(DataComponents.REPAIR_COST, 0)), false);
+        return 1;
     }
 }
