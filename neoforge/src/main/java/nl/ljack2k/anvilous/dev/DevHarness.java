@@ -191,6 +191,28 @@ public final class DevHarness {
                                                 IntegerArgumentType.getInteger(ctx, "level"),
                                                 IntegerArgumentType.getInteger(ctx, "materials")))))));
 
+        root.then(Commands.literal("simulate_combine")
+                .then(Commands.argument("item", ResourceLocationArgument.id())
+                        .then(Commands.argument("damage_a", IntegerArgumentType.integer(0))
+                                .then(Commands.argument("damage_b", IntegerArgumentType.integer(0))
+                                        .executes(ctx -> simulateCombine(
+                                                ctx.getSource(),
+                                                ResourceLocationArgument.getId(ctx, "item"),
+                                                IntegerArgumentType.getInteger(ctx, "damage_a"),
+                                                IntegerArgumentType.getInteger(ctx, "damage_b"),
+                                                null, 0))
+                                        // Optional: put the same enchantment on both, to
+                                        // exercise the merge rather than only the durability.
+                                        .then(Commands.argument("enchantment", ResourceLocationArgument.id())
+                                                .then(Commands.argument("level", IntegerArgumentType.integer(1, 5))
+                                                        .executes(ctx -> simulateCombine(
+                                                                ctx.getSource(),
+                                                                ResourceLocationArgument.getId(ctx, "item"),
+                                                                IntegerArgumentType.getInteger(ctx, "damage_a"),
+                                                                IntegerArgumentType.getInteger(ctx, "damage_b"),
+                                                                ResourceLocationArgument.getId(ctx, "enchantment"),
+                                                                IntegerArgumentType.getInteger(ctx, "level")))))))));
+
         root.then(Commands.literal("dump_repair")
                 .then(Commands.argument("percent", IntegerArgumentType.integer(1, 100))
                         .executes(ctx -> dumpRepair(ctx.getSource(),
@@ -230,7 +252,17 @@ public final class DevHarness {
 
                 ResourceLocation id = BuiltInRegistries.ITEM.getKey(item);
                 if (materials.isEmpty()) {
+                    // No material repair exists for these, so combining two is the only way
+                    // to fix them - which is exactly what the anvil does with them.
                     noMaterial.add(id.toString());
+                    Files.writeString(out.resolve(id.getPath() + ".json"), """
+                            {
+                              "type": "anvilous:smithing_combine",
+                              "base": { "item": "%s" },
+                              "repair_cost": "reset"
+                            }
+                            """.formatted(id));
+                    written++;
                     continue;
                 }
 
@@ -305,6 +337,78 @@ public final class DevHarness {
             entries.add("{ \"item\": \"" + leftover + "\", \"percent\": " + percent + " }");
         }
         return entries;
+    }
+
+    /** Combining two of the same item, driven through the same real menu. */
+    private static int simulateCombine(CommandSourceStack source, ResourceLocation item,
+                                       int damageA, int damageB,
+                                       ResourceLocation enchantment, int level)
+            throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+        ServerPlayer player = source.getPlayerOrException();
+        ServerLevel serverLevel = player.serverLevel();
+        BlockPos pos = player.blockPosition();
+
+        if (!serverLevel.getBlockState(pos).is(Blocks.SMITHING_TABLE)) {
+            serverLevel.setBlockAndUpdate(pos, Blocks.SMITHING_TABLE.defaultBlockState());
+        }
+
+        Item type = BuiltInRegistries.ITEM.getOptional(item).orElse(null);
+        if (type == null) {
+            source.sendSuccess(() -> Component.literal("No such item: " + item), false);
+            return 0;
+        }
+
+        ItemStack toolA = new ItemStack(type);
+        ItemStack toolB = new ItemStack(type);
+        toolA.setDamageValue(Math.min(damageA, toolA.getMaxDamage()));
+        toolB.setDamageValue(Math.min(damageB, toolB.getMaxDamage()));
+        int startA = toolA.getDamageValue();
+        int startB = toolB.getDamageValue();
+
+        Holder<Enchantment> holder = null;
+        if (enchantment != null) {
+            holder = serverLevel.registryAccess()
+                    .lookupOrThrow(Registries.ENCHANTMENT)
+                    .get(ResourceKey.create(Registries.ENCHANTMENT, enchantment))
+                    .orElse(null);
+            if (holder == null) {
+                source.sendSuccess(() -> Component.literal("No such enchantment: " + enchantment), false);
+                return 0;
+            }
+            for (ItemStack stack : List.of(toolA, toolB)) {
+                ItemEnchantments.Mutable mutable = new ItemEnchantments.Mutable(
+                        stack.getOrDefault(DataComponents.ENCHANTMENTS, ItemEnchantments.EMPTY));
+                mutable.set(holder, level);
+                stack.set(DataComponents.ENCHANTMENTS, mutable.toImmutable());
+            }
+        }
+        Holder<Enchantment> queried = holder;
+
+        SmithingMenu menu = new SmithingMenu(1, player.getInventory(),
+                ContainerLevelAccess.create(serverLevel, pos));
+        menu.getSlot(SmithingMenu.BASE_SLOT).set(toolA);
+        menu.getSlot(SmithingMenu.ADDITIONAL_SLOT).set(toolB);
+        menu.createResult();
+
+        ItemStack result = menu.getSlot(SmithingMenu.RESULT_SLOT).getItem();
+        if (result.isEmpty()) {
+            source.sendSuccess(() -> Component.literal(
+                    item.getPath() + " " + startA + " + " + startB + " -> NO RECIPE MATCH"), false);
+            return 0;
+        }
+
+        menu.getSlot(SmithingMenu.RESULT_SLOT).onTake(player, result);
+
+        int endDamage = result.getDamageValue();
+        boolean sacrificeGone = menu.getSlot(SmithingMenu.ADDITIONAL_SLOT).getItem().isEmpty();
+        String enchantReport = queried == null ? "" : " | " + enchantment.getPath() + " now level "
+                + result.getOrDefault(DataComponents.ENCHANTMENTS, ItemEnchantments.EMPTY).getLevel(queried);
+
+        source.sendSuccess(() -> Component.literal(
+                item.getPath() + " damage " + startA + " + damage " + startB
+                        + " -> damage " + endDamage + "/" + result.getMaxDamage()
+                        + " | sacrifice consumed " + sacrificeGone + enchantReport), false);
+        return 1;
     }
 
     /** The enchanting half of {@link #simulate}, driven through the same real menu. */

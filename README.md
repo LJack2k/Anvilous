@@ -29,6 +29,20 @@ doesn't care.
 Both sides need the mod: recipes are synced to every client, and the smithing table filters
 its input slots against the client's own recipe list.
 
+## As an anvil replacement
+
+| Anvil operation | Anvilous |
+| --- | --- |
+| Repair with material units | `anvilous:smithing_repair` |
+| Combine two of the same item | `anvilous:smithing_combine` |
+| Apply an enchanted book | `anvilous:smithing_enchant` |
+| Rename | **not possible** |
+
+Renaming needs a text field, and the smithing table has none. Adding one would mean shipping
+a block and a menu of our own, which is exactly what this mod avoids — everything here runs
+in the vanilla smithing table, so it cannot collide with whatever else a pack installs. A
+pack replacing the anvil entirely still needs something else for naming.
+
 ## Repair recipes
 
 One file per tool or tool group, in `data/<namespace>/recipe/`:
@@ -82,6 +96,29 @@ to put in it.
 
 Vanilla's smithing menu removes exactly one item per craft, so taking the right number needs
 a mixin on `SmithingMenu`; it is in `nl.ljack2k.anvilous.mixin`.
+
+## Combine recipes
+
+Two of the same item, their durability added and their enchantments merged — the anvil's
+third trick, and the only repair some items have:
+
+```json
+{
+  "type": "anvilous:smithing_combine",
+  "base": { "item": "minecraft:bow" },
+  "repair_cost": "reset"
+}
+```
+
+Tool in the base slot, the sacrifice in the addition slot. Nine vanilla items have no
+material repair at all — bows, crossbows, fishing rods, shears, tridents, flint and steel,
+brushes and the two sticks-on-a-string — so without this they cannot be repaired here at all.
+
+The durability sum is vanilla's, bonus included: both items' remaining durability plus 12% of
+the maximum. `bonus_percent` changes that for packs that want to; leave it out for parity.
+
+Enchantments on the sacrifice are merged in by the same rules used for books, and ones that
+do not fit are skipped rather than failing the craft — again as the anvil does.
 
 ## Enchanting recipes
 

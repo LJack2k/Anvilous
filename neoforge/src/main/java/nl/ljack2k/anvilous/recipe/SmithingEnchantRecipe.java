@@ -139,39 +139,15 @@ public class SmithingEnchantRecipe implements SmithingRecipe, MaterialCostRecipe
             return ItemStack.EMPTY;
         }
 
-        ItemStack tool = input.base();
-        Holder<Enchantment> holder = entry.getKey();
-        if (!tool.supportsEnchantment(holder)) {
-            return ItemStack.EMPTY;
-        }
-
-        ItemEnchantments existing = tool.getOrDefault(DataComponents.ENCHANTMENTS, ItemEnchantments.EMPTY);
-        for (Holder<Enchantment> present : existing.keySet()) {
-            if (!present.equals(holder) && !Enchantment.areCompatible(holder, present)) {
-                return ItemStack.EMPTY;
-            }
-        }
-
-        int bookLevel = entry.getIntValue();
-        int current = existing.getLevel(holder);
-        // Vanilla's anvil rule: two equal levels make the next one up, otherwise the higher
-        // of the two wins.
-        int merged = Math.min(current == bookLevel ? bookLevel + 1 : Math.max(current, bookLevel),
-                holder.value().getMaxLevel());
-        if (merged <= current) {
-            // Nothing would change, so do not charge for it.
-            return ItemStack.EMPTY;
-        }
-
-        ItemStack result = tool.copy();
+        ItemStack result = input.base().copy();
         result.setCount(1);
 
-        // Set the component directly rather than through EnchantmentHelper.updateEnchantments:
-        // that helper returns without doing anything when the component is absent, which would
-        // be a silent no-op on any item that does not carry an empty one already.
-        ItemEnchantments.Mutable merging = new ItemEnchantments.Mutable(existing);
-        merging.set(holder, merged);
-        result.set(DataComponents.ENCHANTMENTS, merging.toImmutable());
+        // Shared with smithing_combine, so a book and a sacrificed tool can never disagree
+        // about what merging an enchantment means.
+        if (!EnchantMerge.apply(result, entry.getKey(), entry.getIntValue())) {
+            // Refused, or would change nothing - either way there is nothing to charge for.
+            return ItemStack.EMPTY;
+        }
 
         this.repairCost.apply(result);
         return result;
