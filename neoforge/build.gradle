@@ -1,8 +1,8 @@
 plugins {
     id 'java-library'
-    // ModDevGradle — the modern way to develop NeoForge mods. 1.x serves the
-    // 1.21.x line; the 26.1 branch moves to 2.x (Gradle 9 / Java 25).
-    id 'net.neoforged.moddev' version '1.0.20'
+    // ModDevGradle — the modern way to develop NeoForge mods. 2.x is required
+    // for the 26.1 line (Gradle 9 / Java 25); the 1.21.1 branch stays on 1.x.
+    id 'net.neoforged.moddev' version '2.0.141'
 }
 
 version = mod_version
