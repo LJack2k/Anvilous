@@ -29,7 +29,7 @@ doesn't care.
 Both sides need the mod: recipes are synced to every client, and the smithing table filters
 its input slots against the client's own recipe list.
 
-## Recipes
+## Repair recipes
 
 One file per tool or tool group, in `data/<namespace>/recipe/`:
 
@@ -42,7 +42,6 @@ One file per tool or tool group, in `data/<namespace>/recipe/`:
     { "item": "minecraft:diamond",         "percent": 50 },
     { "item": "minecraft:netherite_ingot", "percent": 100 }
   ],
-  "max_per_craft": 4,
   "keep_enchantments": true,
   "repair_cost": "reset"
 }
@@ -55,34 +54,59 @@ One file per tool or tool group, in `data/<namespace>/recipe/`:
 | `base` | The item being repaired. A `tag` or an `item`. |
 | `materials` | A list; each entry is a `tag` **or** an `item`, with its own `percent`. Tags and items can be mixed freely in one recipe. |
 | `percent` | Durability restored **per material item**, as a percentage of the tool's maximum. A 1562-durability diamond pickaxe at 100/1562, repaired with a 50% material, comes out at 881/1562. Flat, predictable, independent of how damaged the tool is. |
-| `max_per_craft` | How many material items a single craft may consume. Caps the repair so one click can't necessarily fill the bar. |
+| `max_per_craft` | *Optional.* The most material items one craft may take. Leave it out and a craft does as much as the materials allow. Set it only to make a full repair take several crafts. |
 | `keep_enchantments` | Keeps enchantments and components on the repaired item. Normally `true` — it is the reason this mod exists. |
 | `repair_cost` | What to do with the item's hidden anvil-use counter: `reset`, `keep` or `increase`. See below. |
 | `template` | *Optional.* An item required in the template slot, if a pack wants the repair gated behind something. Omit it and the slot stays empty. |
 
-### Stacking
+### What a repair costs
 
-Materials stack. With `percent: 25` and four iron in the slot, one craft repairs 100% and
-consumes all four — up to whatever `max_per_craft` allows.
+**Takes what it needs, up to what you gave it.** Drop a stack of diamonds in beside a nearly
+broken pickaxe and it comes out full, having spent four; do the same beside a pickaxe one
+point from full and it spends one. There is no waste and no setting to tune, because the
+slot is already the player's own limit — they decide what a craft may spend by deciding what
+to put in it.
 
-A craft takes only the materials the repair actually uses. A pickaxe 391 points from full,
-with a stack of diamonds in the slot, costs one diamond — not four. The last material is
-still spent in full even when only part of it is needed.
+Vanilla's smithing menu removes exactly one item per craft, so taking the right number needs
+a mixin on `SmithingMenu`; it is in `nl.ljack2k.anvilous.mixin`.
 
-Set `exact_material_cost = false` in `config/anvilous-server.toml` to get the harsher rule
-instead: every craft consumes as much as it is allowed to, so that same pickaxe one point
-from full costs four diamonds to restore one durability.
+## Enchanting recipes
 
-Vanilla's smithing menu removes exactly one item per craft, so this needs a mixin on
-`SmithingMenu`; it is in `nl.ljack2k.anvilous.mixin`.
+The same table applies an enchantment from a book, paid for in materials rather than
+experience:
 
-## Config
+```json
+{
+  "type": "anvilous:smithing_enchant",
+  "enchantment": "minecraft:mending",
+  "base": { "item": "minecraft:diamond_pickaxe" },
+  "materials": [
+    { "item": "minecraft:diamond", "per_level": 4 }
+  ]
+}
+```
 
-`config/anvilous-server.toml`, synced from server to client:
+Book in the template slot, tool in the base slot, payment in the addition slot. The book is
+consumed, as it is in an anvil.
 
-| Option | Default | Meaning |
-| --- | --- | --- |
-| `exact_material_cost` | `true` | Consume only as many materials as the repair needs. `false` consumes everything the recipe may take, even if the tool fills up first. |
+The recipe names the **enchantment**, not the book. That is what makes per-enchantment
+pricing possible: an ingredient matches items and tags but ignores components, so it could
+say "an enchanted book" but never "a Mending book". The book is only where the level is read
+from, which is also why `per_level` works — a Sharpness recipe at `"per_level": 2` charges 2
+ingots for Sharpness I and 10 for Sharpness V.
+
+| Field | Meaning |
+| --- | --- |
+| `enchantment` | The enchantment this recipe prices, by id. |
+| `base` | What it may be applied to. A `tag` or an `item`. |
+| `materials` | Each entry is a `tag` **or** an `item`, with its own `per_level`. |
+| `per_level` | Items charged **per level** of the enchantment on the book. |
+| `repair_cost` | As for repair: `reset`, `keep` or `increase`. |
+
+Combining follows vanilla's anvil rules, reusing vanilla's own helpers: two equal levels make
+the next one up, levels cap at the enchantment's maximum, incompatible enchantments refuse,
+and whether an item accepts an enchantment is asked of the item, so modded tools answer for
+themselves. A craft that would change nothing is refused rather than charged for.
 
 ### `repair_cost`
 

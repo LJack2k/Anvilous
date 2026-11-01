@@ -4,9 +4,14 @@ import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
+import net.minecraft.commands.arguments.ResourceLocationArgument;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Holder;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -14,6 +19,9 @@ import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.inventory.SmithingMenu;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.enchantment.Enchantment;
+import net.minecraft.world.item.enchantment.EnchantmentHelper;
+import net.minecraft.world.item.enchantment.ItemEnchantments;
 import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.block.Blocks;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -156,7 +164,75 @@ public final class DevHarness {
             return 1;
         }));
 
+        // Same idea as simulate, for the enchanting side: a book in the template slot, a tool
+        // in the base slot, materials standing in for the experience.
+        root.then(Commands.literal("simulate_enchant")
+                .then(Commands.argument("enchantment", ResourceLocationArgument.id())
+                        .then(Commands.argument("level", IntegerArgumentType.integer(1, 5))
+                                .then(Commands.argument("materials", IntegerArgumentType.integer(1, 64))
+                                        .executes(ctx -> simulateEnchant(
+                                                ctx.getSource(),
+                                                ResourceLocationArgument.getId(ctx, "enchantment"),
+                                                IntegerArgumentType.getInteger(ctx, "level"),
+                                                IntegerArgumentType.getInteger(ctx, "materials")))))));
+
         event.getDispatcher().register(root);
+    }
+
+    /** The enchanting half of {@link #simulate}, driven through the same real menu. */
+    private static int simulateEnchant(CommandSourceStack source, ResourceLocation enchantment,
+                                       int level, int materials)
+            throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+        ServerPlayer player = source.getPlayerOrException();
+        ServerLevel serverLevel = player.serverLevel();
+        BlockPos pos = player.blockPosition();
+
+        if (!serverLevel.getBlockState(pos).is(Blocks.SMITHING_TABLE)) {
+            serverLevel.setBlockAndUpdate(pos, Blocks.SMITHING_TABLE.defaultBlockState());
+        }
+
+        Holder<Enchantment> holder = serverLevel.registryAccess()
+                .lookupOrThrow(Registries.ENCHANTMENT)
+                .get(ResourceKey.create(Registries.ENCHANTMENT, enchantment))
+                .orElse(null);
+        if (holder == null) {
+            source.sendSuccess(() -> Component.literal("No such enchantment: " + enchantment), false);
+            return 0;
+        }
+
+        // updateEnchantments already routes a book to stored_enchantments - its
+        // getComponentType switches on ENCHANTED_BOOK - so copying between components here
+        // would overwrite what it just wrote with an empty one.
+        ItemStack book = new ItemStack(Items.ENCHANTED_BOOK);
+        EnchantmentHelper.updateEnchantments(book, mutable -> mutable.set(holder, level));
+
+        SmithingMenu menu = new SmithingMenu(1, player.getInventory(),
+                ContainerLevelAccess.create(serverLevel, pos));
+        menu.getSlot(SmithingMenu.TEMPLATE_SLOT).set(book);
+        menu.getSlot(SmithingMenu.BASE_SLOT).set(new ItemStack(Items.DIAMOND_PICKAXE));
+        menu.getSlot(SmithingMenu.ADDITIONAL_SLOT).set(new ItemStack(Items.DIAMOND, materials));
+        menu.createResult();
+
+        ItemStack result = menu.getSlot(SmithingMenu.RESULT_SLOT).getItem();
+        if (result.isEmpty()) {
+            source.sendSuccess(() -> Component.literal(
+                    enchantment.getPath() + " " + level + " + " + materials
+                            + " diamond(s) -> NO RECIPE MATCH"), false);
+            return 0;
+        }
+
+        menu.getSlot(SmithingMenu.RESULT_SLOT).onTake(player, result);
+
+        int got = result.getOrDefault(DataComponents.ENCHANTMENTS, ItemEnchantments.EMPTY).getLevel(holder);
+        int used = materials - menu.getSlot(SmithingMenu.ADDITIONAL_SLOT).getItem().getCount();
+        boolean bookGone = menu.getSlot(SmithingMenu.TEMPLATE_SLOT).getItem().isEmpty();
+
+        source.sendSuccess(() -> Component.literal(
+                enchantment.getPath() + " " + level + " + " + materials + " diamond(s)"
+                        + " -> got level " + got
+                        + " | consumed " + used
+                        + " | book consumed " + bookGone), false);
+        return 1;
     }
 
     /**

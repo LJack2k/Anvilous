@@ -4,7 +4,6 @@
   "materials": [
     { "tag": "c:gems/diamond", "percent": 25 }
   ],
-  "max_per_craft": 4,
   "keep_enchantments": true,
   "repair_cost": "reset"
 }

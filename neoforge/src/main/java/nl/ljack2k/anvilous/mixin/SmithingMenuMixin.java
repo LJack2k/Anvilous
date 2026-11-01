@@ -10,7 +10,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.SmithingRecipe;
 import net.minecraft.world.item.crafting.SmithingRecipeInput;
-import nl.ljack2k.anvilous.recipe.SmithingRepairRecipe;
+import nl.ljack2k.anvilous.recipe.MaterialCostRecipe;
 import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -26,7 +26,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * {@code smithing_transform} but wrong for a repair that was assembled from the whole stack:
  * without this, the player gets a four-diamond repair for one diamond.
  *
- * <p>How many to take is {@link SmithingRepairRecipe#unitsConsumed}, the same method that
+ * <p>How many to take is {@link MaterialCostRecipe#unitsConsumed}, the same method that
  * decides what the result is worth, so the cost and the value cannot drift apart.
  *
  * <p>The count has to be worked out at HEAD rather than TAIL: it depends on how damaged the
@@ -59,7 +59,7 @@ public abstract class SmithingMenuMixin extends ItemCombinerMenu {
         this.anvilous$extraToConsume = 0;
 
         if (this.selectedRecipe == null
-                || !(this.selectedRecipe.value() instanceof SmithingRepairRecipe recipe)) {
+                || !(this.selectedRecipe.value() instanceof MaterialCostRecipe recipe)) {
             return;
         }
 

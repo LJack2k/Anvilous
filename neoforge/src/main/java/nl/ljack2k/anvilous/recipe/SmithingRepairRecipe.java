@@ -14,7 +14,7 @@ import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.item.crafting.SmithingRecipe;
 import net.minecraft.world.item.crafting.SmithingRecipeInput;
 import net.minecraft.world.level.Level;
-import nl.ljack2k.anvilous.Config;
+
 
 import java.util.ArrayList;
 import java.util.List;
@@ -31,22 +31,19 @@ import java.util.Optional;
  * item consumed — not a percentage of what is missing, so the amount is the same whether the
  * tool is nearly broken or nearly full.
  */
-public class SmithingRepairRecipe implements SmithingRecipe {
-
-    /** Vanilla's own cap for anvil unit-repair, and our default. */
-    public static final int DEFAULT_MAX_PER_CRAFT = 4;
+public class SmithingRepairRecipe implements SmithingRecipe, MaterialCostRecipe {
 
     private final Optional<Ingredient> template;
     private final Ingredient base;
     private final List<RepairMaterial> materials;
-    private final int maxPerCraft;
+    private final Optional<Integer> maxPerCraft;
     private final boolean keepEnchantments;
     private final RepairCostMode repairCost;
 
     public SmithingRepairRecipe(Optional<Ingredient> template,
                                 Ingredient base,
                                 List<RepairMaterial> materials,
-                                int maxPerCraft,
+                                Optional<Integer> maxPerCraft,
                                 boolean keepEnchantments,
                                 RepairCostMode repairCost) {
         this.template = template;
@@ -69,7 +66,7 @@ public class SmithingRepairRecipe implements SmithingRecipe {
         return this.materials;
     }
 
-    public int maxPerCraft() {
+    public Optional<Integer> maxPerCraft() {
         return this.maxPerCraft;
     }
 
@@ -141,20 +138,25 @@ public class SmithingRepairRecipe implements SmithingRecipe {
     }
 
     /**
-     * How many material items this craft takes: what is in the slot, capped by
-     * {@code max_per_craft}, and — unless the pack has turned that off — by how many the
-     * repair actually uses.
+     * How many material items this craft takes: as many as the repair actually uses, limited
+     * by what is in the slot and by {@code max_per_craft} if the pack set one.
+     *
+     * <p>Nothing is wasted, because the slot is already the player's own limit — they decide
+     * what a craft may spend by deciding what to put in it. {@code max_per_craft} exists only
+     * for packs that want a full repair to take several crafts.
      *
      * <p>Both {@link #assemble} and the {@code SmithingMenu} mixin call this, so what the
      * result is worth and what it costs can never drift apart. Vanilla's menu removes exactly
      * one item from the addition slot, which is why the mixin exists at all.
      */
+    @Override
     public int unitsConsumed(SmithingRecipeInput input) {
         ItemStack tool = input.base();
-        int available = Math.min(input.addition().getCount(), this.maxPerCraft);
+        int available = Math.min(input.addition().getCount(),
+                this.maxPerCraft.orElse(Integer.MAX_VALUE));
 
         RepairMaterial material = this.materialFor(input.addition()).orElse(null);
-        if (material == null || !Config.exactMaterialCost()) {
+        if (material == null) {
             return Math.max(1, available);
         }
 
@@ -204,7 +206,7 @@ public class SmithingRepairRecipe implements SmithingRecipe {
                                 .forGetter(SmithingRepairRecipe::base),
                         RepairMaterial.CODEC.listOf().fieldOf("materials")
                                 .forGetter(SmithingRepairRecipe::materials),
-                        ExtraCodecs.POSITIVE_INT.optionalFieldOf("max_per_craft", DEFAULT_MAX_PER_CRAFT)
+                        ExtraCodecs.POSITIVE_INT.optionalFieldOf("max_per_craft")
                                 .forGetter(SmithingRepairRecipe::maxPerCraft),
                         Codec.BOOL.optionalFieldOf("keep_enchantments", true)
                                 .forGetter(SmithingRepairRecipe::keepEnchantments),
@@ -231,8 +233,12 @@ public class SmithingRepairRecipe implements SmithingRecipe {
                             materials.add(RepairMaterial.fromNetwork(buf));
                         }
 
+                        Optional<Integer> maxPerCraft = buf.readBoolean()
+                                ? Optional.of(buf.readVarInt())
+                                : Optional.empty();
+
                         return new SmithingRepairRecipe(template, base, materials,
-                                buf.readVarInt(), buf.readBoolean(),
+                                maxPerCraft, buf.readBoolean(),
                                 buf.readEnum(RepairCostMode.class));
                     }
 
@@ -246,7 +252,8 @@ public class SmithingRepairRecipe implements SmithingRecipe {
                         buf.writeVarInt(recipe.materials().size());
                         recipe.materials().forEach(material -> material.toNetwork(buf));
 
-                        buf.writeVarInt(recipe.maxPerCraft());
+                        buf.writeBoolean(recipe.maxPerCraft().isPresent());
+                        recipe.maxPerCraft().ifPresent(buf::writeVarInt);
                         buf.writeBoolean(recipe.keepEnchantments());
                         buf.writeEnum(recipe.repairCost());
                     }

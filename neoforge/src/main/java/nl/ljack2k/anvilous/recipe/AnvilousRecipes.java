@@ -19,4 +19,7 @@ public final class AnvilousRecipes {
      */
     public static final DeferredHolder<RecipeSerializer<?>, SmithingRepairRecipe.Serializer> SMITHING_REPAIR =
             SERIALIZERS.register("smithing_repair", SmithingRepairRecipe.Serializer::new);
+
+    public static final DeferredHolder<RecipeSerializer<?>, SmithingEnchantRecipe.Serializer> SMITHING_ENCHANT =
+            SERIALIZERS.register("smithing_enchant", SmithingEnchantRecipe.Serializer::new);
 }
