@@ -85,3 +85,31 @@ tasks.named('processResources', ProcessResources).configure {
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
 }
+
+// Drop the freshly built jar into a local launcher instance so a rebuild is
+// testable in a real client straight away.
+//
+// The path is machine-specific, so it never lives in this repo: put
+//   prism_instance=C:/path/to/instances/<name>/minecraft
+// in local.properties (gitignored) next to this file, or pass
+// -Pprism_instance=... on the command line. Without it the task is not even
+// registered, so nothing to break on anyone else's checkout.
+var localProperties = rootProject.file('local.properties')
+if (localProperties.exists()) {
+    var loaded = new Properties()
+    localProperties.withInputStream { loaded.load(it) }
+    loaded.each { key, value -> if (!project.hasProperty(key)) { ext.set(key as String, value) } }
+}
+
+if (project.hasProperty('prism_instance')) {
+    tasks.register('installToPrism', Copy) {
+        description = 'Copies the built jar into the local Prism Launcher instance.'
+        var modsDir = file("${prism_instance}/mods")
+        // Clear out jars from earlier mod_versions, or they pile up and the
+        // game loads two copies of the mod.
+        doFirst { delete fileTree(modsDir) { include "${mod_name}-*.jar" } }
+        from tasks.named('jar')
+        into modsDir
+    }
+    tasks.named('build') { finalizedBy 'installToPrism' }
+}

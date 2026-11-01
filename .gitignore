@@ -35,3 +35,6 @@ libs/*.jar
 # OS
 .DS_Store
 Thumbs.db
+
+# Machine-specific gradle properties (launcher paths etc.)
+local.properties
