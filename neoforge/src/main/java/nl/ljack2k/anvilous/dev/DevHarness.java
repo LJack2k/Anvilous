@@ -134,20 +134,13 @@ public final class DevHarness {
         LiteralArgumentBuilder<CommandSourceStack> root = Commands.literal(Anvilous.MOD_ID)
                 .requires(source -> source.hasPermission(2));
 
-        root.then(Commands.literal("kit").executes(ctx -> {
-            ServerPlayer player = ctx.getSource().getPlayerOrException();
-
-            ItemStack pickaxe = new ItemStack(Items.DIAMOND_PICKAXE);
-            // Most of the way to broken, so a 25% repair is obvious at a glance.
-            pickaxe.setDamageValue(pickaxe.getMaxDamage() - 100);
-            player.getInventory().add(pickaxe);
-            player.getInventory().add(new ItemStack(Items.DIAMOND, 64));
-
-            ctx.getSource().sendSuccess(() -> Component.literal(
-                    "Gave a diamond pickaxe at " + 100 + "/" + new ItemStack(Items.DIAMOND_PICKAXE).getMaxDamage()
-                            + " durability, and 64 diamonds."), false);
-            return 1;
-        }));
+        // One kit per thing the mod does, so each can be tried without building the test
+        // bench by hand every time. Bare "kit" stays the repair one it always was.
+        root.then(Commands.literal("kit")
+                .executes(ctx -> kit(ctx.getSource(), "repair"))
+                .then(Commands.literal("repair").executes(ctx -> kit(ctx.getSource(), "repair")))
+                .then(Commands.literal("combine").executes(ctx -> kit(ctx.getSource(), "combine")))
+                .then(Commands.literal("enchant").executes(ctx -> kit(ctx.getSource(), "enchant"))));
 
         root.then(Commands.literal("table").executes(ctx -> {
             ServerPlayer player = ctx.getSource().getPlayerOrException();
@@ -330,6 +323,111 @@ public final class DevHarness {
         source.sendSuccess(() -> Component.literal(
                 damageable.size() + " damageable items, " + finalWritten + " recipes written to "
                         + out + ", " + noMaterial.size() + " have no material repair"), false);
+        return 1;
+    }
+
+    /** A worn copy of an item, with {@code percentLeft} of its durability remaining. */
+    private static ItemStack worn(net.minecraft.world.level.ItemLike item, int percentLeft) {
+        ItemStack stack = new ItemStack(item);
+        stack.setDamageValue(stack.getMaxDamage() * (100 - percentLeft) / 100);
+        return stack;
+    }
+
+    private static Holder<Enchantment> enchantment(CommandSourceStack source, String path) {
+        return source.registryAccess().lookupOrThrow(Registries.ENCHANTMENT)
+                .getOrThrow(ResourceKey.create(Registries.ENCHANTMENT,
+                        ResourceLocation.withDefaultNamespace(path)));
+    }
+
+    private static ItemStack with(CommandSourceStack source, ItemStack stack, String path, int level) {
+        stack.enchant(enchantment(source, path), level);
+        return stack;
+    }
+
+    private static ItemStack book(CommandSourceStack source, String path, int level) {
+        ItemStack book = new ItemStack(Items.ENCHANTED_BOOK);
+        Holder<Enchantment> holder = enchantment(source, path);
+        // updateEnchantments puts a book's entry in stored_enchantments by itself.
+        EnchantmentHelper.updateEnchantments(book, mutable -> mutable.set(holder, level));
+        return book;
+    }
+
+    /**
+     * Fills the player's inventory with a bench for one of the three things the mod does.
+     *
+     * <p>Each kit is chosen to make a rule visible rather than to be a tidy set: the repair
+     * one carries an enchanted pickaxe because surviving enchantments is the point, and a
+     * nearly full one because taking only what is needed is the other point.
+     */
+    private static int kit(CommandSourceStack source, String which)
+            throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+        ServerPlayer player = source.getPlayerOrException();
+        List<ItemStack> kit = new ArrayList<>();
+        String summary;
+
+        switch (which) {
+            case "combine" -> {
+                // Two of each, worn to 40%, so the sum plus the 12% bonus lands above half
+                // and the bar visibly jumps. One of each pair is enchanted: a combine should
+                // carry those across, and Power and Flame should both survive the same craft.
+                kit.add(with(source, worn(Items.BOW, 40), "power", 3));
+                kit.add(with(source, worn(Items.BOW, 40), "flame", 1));
+                kit.add(with(source, worn(Items.TRIDENT, 40), "loyalty", 3));
+                kit.add(worn(Items.TRIDENT, 40));
+                kit.add(worn(Items.SHEARS, 30));
+                kit.add(worn(Items.SHEARS, 30));
+                kit.add(worn(Items.FISHING_ROD, 50));
+                kit.add(worn(Items.FISHING_ROD, 50));
+                summary = "Combining: pairs of bow, trident, shears and rod. "
+                        + "The bows carry Power III and Flame - one craft should keep both.";
+            }
+            case "enchant" -> {
+                // One book from each anvil_cost band, so all four materials get used, plus a
+                // sword already at Sharpness IV: a second IV book should make it V.
+                kit.add(book(source, "sharpness", 5));
+                kit.add(book(source, "sharpness", 4));
+                kit.add(book(source, "mending", 1));
+                kit.add(book(source, "unbreaking", 3));
+                kit.add(book(source, "silk_touch", 1));
+                kit.add(book(source, "protection", 4));
+
+                kit.add(new ItemStack(Items.DIAMOND_PICKAXE));
+                kit.add(with(source, new ItemStack(Items.DIAMOND_SWORD), "sharpness", 4));
+                kit.add(new ItemStack(Items.DIAMOND_CHESTPLATE));
+                kit.add(new ItemStack(Items.MACE));
+
+                kit.add(new ItemStack(Items.LAPIS_LAZULI, 64));
+                kit.add(new ItemStack(Items.AMETHYST_SHARD, 64));
+                kit.add(new ItemStack(Items.ENDER_PEARL, 64));
+                kit.add(new ItemStack(Items.BLAZE_POWDER, 64));
+                summary = "Enchanting: a book from each cost band and all four materials. "
+                        + "The sword is already Sharpness IV - the IV book should make it V.";
+            }
+            default -> {
+                kit.add(with(source, with(source, worn(Items.DIAMOND_PICKAXE, 10),
+                        "efficiency", 5), "unbreaking", 3));
+                // Nearly full, to show a craft taking one diamond rather than the stack.
+                kit.add(worn(Items.DIAMOND_PICKAXE, 99));
+                kit.add(worn(Items.IRON_SWORD, 20));
+                kit.add(worn(Items.LEATHER_CHESTPLATE, 15));
+                kit.add(worn(Items.SHIELD, 20));
+                kit.add(worn(Items.ELYTRA, 10));
+
+                kit.add(new ItemStack(Items.DIAMOND, 64));
+                kit.add(new ItemStack(Items.IRON_INGOT, 64));
+                kit.add(new ItemStack(Items.LEATHER, 64));
+                kit.add(new ItemStack(Items.OAK_PLANKS, 64));
+                kit.add(new ItemStack(Items.PHANTOM_MEMBRANE, 64));
+                summary = "Repair: worn gear covering an item, a c: tag and a vanilla tag. "
+                        + "The enchanted pickaxe should keep both enchantments; "
+                        + "the nearly full one should cost a single diamond.";
+            }
+        }
+
+        kit.forEach(stack -> player.getInventory().add(stack));
+
+        String message = summary;
+        source.sendSuccess(() -> Component.literal(message), false);
         return 1;
     }
 
