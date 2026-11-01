@@ -7,9 +7,6 @@ and leave the anvil's experience bill behind.
 
 **Minecraft 1.21.1 · NeoForge · client and server**
 
-> **Status: in design.** Nothing is built yet. This README is the agreed spec; the format
-> below is what the mod is being written against.
-
 ---
 
 ## What it does
@@ -23,8 +20,8 @@ The anvil can already do some of this, badly. It charges levels, it raises the p
 time you use it, and eventually it refuses outright. Anvilous moves the job to a block that
 doesn't care.
 
-> **On its own it does nothing.** No recipes ship enabled by default beyond the starter pack
-> below — a pack decides which tools can be repaired, by what, and for how much.
+> **It works out of the box.** Every damageable item in vanilla is covered by the built-in
+> recipes below. A pack overrides any of them by shipping a file at the same path.
 
 Both sides need the mod: recipes are synced to every client, and the smithing table filters
 its input slots against the client's own recipe list.
@@ -168,11 +165,29 @@ The smithing table never reads it, so repairs here stay cheap no matter what it 
 - `keep` — leave it alone.
 - `increase` — grow it the way the anvil would, for packs that want repairs to get costlier.
 
-## Starter recipes
+## Built-in recipes
 
-A built-in pack translates vanilla's own repair rules: `percent: 25`, `max_per_craft: 4`, the
-repair material for each tier. That is exactly what an anvil gives you, minus the experience.
-Packs are expected to replace or extend it.
+Anvilous ships 68 recipes, one for every damageable item in vanilla — 59 `smithing_repair`,
+and 9 `smithing_combine` for the items that have no material repair at all. They are not a
+new balance: they are vanilla's own rules moved to a block that does not charge experience.
+Each repair names the material `Item#isValidRepairItem` already accepts for that item, at
+`percent: 25` — the same quarter of maximum durability an anvil restores per unit — and uses
+a `c:` tag wherever one exists, so a mod's own iron or leather works too.
+
+A pack replaces any of them by shipping a file at the same path: `data/anvilous/recipe/diamond_pickaxe.json`
+in a datapack wins over the mod's copy. There is no way to delete a recipe from JSON, but one
+whose `base` matches nothing is inert, so overriding with a recipe for an item that does not
+exist is how a pack turns one off.
+
+The generator that wrote them is in the dev harness (`/anvilous dump_repair <percent>`), so a
+pack with its own tiers can regenerate the whole set rather than hand-write it.
+
+### Enchanting is not included
+
+No `smithing_enchant` recipes ship. Vanilla prices enchanting in experience, so there is no
+parity to translate — what a Mending book ought to cost in materials is a pack's decision,
+not this mod's. Two worked examples sit in [`examples/enchanting/`](examples/enchanting) to
+copy from.
 
 ## Building
 

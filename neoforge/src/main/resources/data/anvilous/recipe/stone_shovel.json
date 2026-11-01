@@ -1,0 +1,9 @@
+{
+  "type": "anvilous:smithing_repair",
+  "base": { "item": "minecraft:stone_shovel" },
+  "materials": [
+    { "tag": "minecraft:stone_crafting_materials", "percent": 25 }
+  ],
+  "keep_enchantments": true,
+  "repair_cost": "reset"
+}

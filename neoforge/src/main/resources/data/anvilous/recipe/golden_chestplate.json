@@ -1,0 +1,9 @@
+{
+  "type": "anvilous:smithing_repair",
+  "base": { "item": "minecraft:golden_chestplate" },
+  "materials": [
+    { "tag": "c:ingots/gold", "percent": 25 }
+  ],
+  "keep_enchantments": true,
+  "repair_cost": "reset"
+}

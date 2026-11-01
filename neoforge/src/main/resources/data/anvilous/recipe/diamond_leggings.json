@@ -1,0 +1,9 @@
+{
+  "type": "anvilous:smithing_repair",
+  "base": { "item": "minecraft:diamond_leggings" },
+  "materials": [
+    { "tag": "c:gems/diamond", "percent": 25 }
+  ],
+  "keep_enchantments": true,
+  "repair_cost": "reset"
+}

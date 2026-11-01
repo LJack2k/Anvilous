@@ -1,0 +1,9 @@
+{
+  "type": "anvilous:smithing_repair",
+  "base": { "item": "minecraft:leather_helmet" },
+  "materials": [
+    { "tag": "c:leathers", "percent": 25 }
+  ],
+  "keep_enchantments": true,
+  "repair_cost": "reset"
+}

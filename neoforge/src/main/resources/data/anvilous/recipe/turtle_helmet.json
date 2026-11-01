@@ -1,0 +1,9 @@
+{
+  "type": "anvilous:smithing_repair",
+  "base": { "item": "minecraft:turtle_helmet" },
+  "materials": [
+    { "item": "minecraft:turtle_scute", "percent": 25 }
+  ],
+  "keep_enchantments": true,
+  "repair_cost": "reset"
+}

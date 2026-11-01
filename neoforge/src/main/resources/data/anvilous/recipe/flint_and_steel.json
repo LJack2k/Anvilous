@@ -1,0 +1,5 @@
+{
+  "type": "anvilous:smithing_combine",
+  "base": { "item": "minecraft:flint_and_steel" },
+  "repair_cost": "reset"
+}
