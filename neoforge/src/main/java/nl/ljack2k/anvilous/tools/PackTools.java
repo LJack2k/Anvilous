@@ -48,7 +48,7 @@ import java.util.stream.Collectors;
  *
  * <p>The generators read the loaded registries rather than a table someone typed, so run
  * inside a modpack they emit correct recipes for <em>its</em> tools and enchantments, not
- * just vanilla's â which is the whole reason they are here. The vanilla sets the mod ships
+ * just vanilla's — which is the whole reason they are here. The vanilla sets the mod ships
  * were produced by exactly these commands.
  *
  * <p>Off unless {@code tools.commands} is set in the config — including in dev, so a dev run
@@ -56,7 +56,7 @@ import java.util.stream.Collectors;
  * tool and nothing a player needs: {@code dump_*} writes files into the game directory, and
  * all of them require permission level 2 besides.
  *
- * <p>The rest of the harness â kits, screenshots, the recipe browser â stays in
+ * <p>The rest of the harness — kits, screenshots, the recipe browser — stays in
  * {@code nl.ljack2k.anvilous.dev}, which is stripped from the published jar. Both register
  * under {@code /anvilous}; Brigadier merges the two literal roots.
  */
@@ -120,8 +120,8 @@ public final class PackTools {
     /**
      * Writes a starter repair pack derived from the game's own data.
      *
-     * <p>Vanilla already knows every repair material â {@code Item#isValidRepairItem} is what
-     * the anvil asks â so the baseline is read out of the registry rather than typed by hand,
+     * <p>Vanilla already knows every repair material — {@code Item#isValidRepairItem} is what
+     * the anvil asks — so the baseline is read out of the registry rather than typed by hand,
      * which gets the awkward ones right (elytra take phantom membrane, shields take planks)
      * and, run inside a modpack, covers every modded tool in it too.
      *
@@ -186,13 +186,13 @@ public final class PackTools {
      * Writes a combine recipe for every damageable item.
      *
      * <p>Every one of them, not only the ones with no material repair. Vanilla's anvil
-     * combines any two of the same damageable item â {@code AnvilMenu} asks nothing but
-     * "same item, damageable?" â and combining is not the poor relation of material repair it
+     * combines any two of the same damageable item — {@code AnvilMenu} asks nothing but
+     * "same item, damageable?" — and combining is not the poor relation of material repair it
      * first looks like. It is the route you have when you own the item and not the material:
      * a damaged pickaxe out of a chest, before there is any ore to mend it with.
      *
      * <p>Filenames are prefixed because an item has both a repair and a combine recipe, and
-     * two recipes cannot share a path. The prefix is only a filename â the recipe id it
+     * two recipes cannot share a path. The prefix is only a filename — the recipe id it
      * produces is arbitrary, and nothing reads it back.
      */
     private static int dumpCombine(CommandSourceStack source) {
@@ -250,7 +250,7 @@ public final class PackTools {
     /**
      * The material each {@code anvil_cost} band is paid in.
      *
-     * <p>Vanilla sorts its enchantments into exactly four bands â 1, 2, 4 and 8 â and that
+     * <p>Vanilla sorts its enchantments into exactly four bands — 1, 2, 4 and 8 — and that
      * sorting is the game's own opinion about which enchantments are precious. Reusing it
      * means the four materials are not a ladder someone invented: Sharpness sits in the same
      * band as Protection because vanilla put it there.
@@ -267,8 +267,8 @@ public final class PackTools {
      * A {@code c:} tag holding exactly this one item, if one exists.
      *
      * <p>Exactly, never a superset: {@code c:gems} would also accept diamonds, which is not
-     * what the price says. A tag of precisely this item is free to widen â that is where
-     * another mod's lapis lands â without changing what the recipe means.
+     * what the price says. A tag of precisely this item is free to widen — that is where
+     * another mod's lapis lands — without changing what the recipe means.
      */
     private static String materialEntry(ResourceLocation item, int perLevel) {
         String source = BuiltInRegistries.ITEM.getTags()
@@ -286,7 +286,7 @@ public final class PackTools {
      * Writes one enchanting recipe per enchantment, priced from the game's own numbers.
      *
      * <p>There is no vanilla recipe to copy here the way {@code isValidRepairItem} gives one
-     * for repair â vanilla charges experience. But it does carry a number for exactly this
+     * for repair — vanilla charges experience. But it does carry a number for exactly this
      * job: {@code anvil_cost}, the levels an anvil bills per enchantment level, halved for a
      * book. So the price is that same figure, one material item per experience level vanilla
      * would have taken. Sharpness V costs five, Mending costs two, Thorns III costs twelve.
@@ -353,7 +353,7 @@ public final class PackTools {
      * <p>{@code isValidRepairItem} answers per item and knows nothing about tags, so a shield
      * comes back as eleven plank types and an iron tool as one hard-coded {@code iron_ingot}.
      * Written out like that the pack is pinned to whatever happened to be installed when it
-     * was generated â the opposite of why tags exist. So a tag is used whenever every item in
+     * was generated — the opposite of why tags exist. So a tag is used whenever every item in
      * it is a valid repair material (never a superset, which would accept things the game
      * would not), biggest tag first, and anything left over stays an item.
      */

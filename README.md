@@ -7,6 +7,8 @@ datapack decides — and leave the anvil's experience bill behind.
 
 **Minecraft 1.21.1 · NeoForge · client and server**
 
+Making a modpack? Start with [docs/pack-makers.md](docs/pack-makers.md) — the short version.
+
 ---
 
 ## What it does

@@ -7,7 +7,7 @@ import net.neoforged.neoforge.common.ModConfigSpec;
  *
  * <p>The three files under {@code resources/defaults_*} are content, not machinery: the
  * recipe types, the smithing-table behaviour and the viewer plugins all work with none of
- * them loaded. A pack with its own progression wants exactly that â the engine, and none of
+ * them loaded. A pack with its own progression wants exactly that — the engine, and none of
  * our opinion about what a repair should cost. There is no way to delete a recipe from JSON,
  * so without a switch here the only way to start empty would be to override all 169 files.
  *
@@ -71,7 +71,7 @@ public final class AnvilousConfig {
      * Reads a switch, treating "not loaded yet" as on.
      *
      * <p>Pack finders are built once the configs are in, so this should never fall through in
-     * practice â but reading an unloaded spec throws, and failing closed would silently ship an
+     * practice — but reading an unloaded spec throws, and failing closed would silently ship an
      * empty game to anyone whose config did not come up.
      */
     public static boolean enabled(ModConfigSpec.BooleanValue value) {
