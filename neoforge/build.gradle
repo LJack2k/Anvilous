@@ -35,12 +35,34 @@ neoForge {
             client()
             systemProperty 'forge.logging.markers', 'REGISTRIES'
             systemProperty 'forge.logging.console.level', 'debug'
+            systemProperty 'anvilous.devWindowX', dev_window_x
+            systemProperty 'anvilous.devWindowY', dev_window_y
             programArguments.addAll '--width', '1920', '--height', '1000'
+        }
+        // Auto-joining dev client + dedicated server for the RCON/screenshot harness
+        // (dev-only; enabled by the anvilous.devHarness system property). Separate game
+        // dirs so client and server don't contend on world and log locks.
+        clientJoin {
+            client()
+            gameDirectory = file('run-client')
+            systemProperty 'forge.logging.console.level', 'info'
+            systemProperty 'anvilous.devWindowX', dev_window_x
+            systemProperty 'anvilous.devWindowY', dev_window_y
+            systemProperty 'anvilous.devHarness', 'true'
+            // Force IPv4. Minecraft's game port is bound by Netty, which on Windows
+            // creates a v6-ONLY socket for the wildcard bind, so an IPv4 connect to
+            // 127.0.0.1 is never accepted and --quickPlayMultiplayer just hangs until
+            // the login timeout. Both sides must agree, hence the same flag below.
+            jvmArguments.addAll '-Xmx4G', '-Djava.net.preferIPv4Stack=true'
+            programArguments.addAll '--width', '1920', '--height', '1000',
+                    '--quickPlayMultiplayer', '127.0.0.1:25565'
         }
         server {
             server()
             gameDirectory = file('run-server')
+            systemProperty 'anvilous.devHarness', 'true'
             programArgument '--nogui'
+            jvmArguments.addAll '-Xmx4G', '-Djava.net.preferIPv4Stack=true'
         }
         data {
             data()
@@ -84,6 +106,73 @@ tasks.named('processResources', ProcessResources).configure {
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
+}
+
+// --- Dev server world -------------------------------------------------------
+// run-server/ is gitignored, so its server.properties would otherwise be whatever
+// Minecraft generated the first time - a normal survival world with mobs and a day
+// cycle, different on every clone. dev/server.properties is tracked and copied over
+// it on every run instead, which makes the flat, peaceful, permanently-noon test
+// world reproducible. Edit dev/server.properties, never run-server's copy.
+var prepareDevServer = tasks.register('prepareDevServer') {
+    description = 'Installs the tracked dev server.properties and accepts the EULA.'
+    doLast {
+        var runDir = file('run-server')
+        runDir.mkdirs()
+        // The dev EULA acceptance is the developer's, for a throwaway local world.
+        new File(runDir, 'eula.txt').text = 'eula=true\n'
+        new File(runDir, 'server.properties').text = file('dev/server.properties').text
+        logger.lifecycle('prepareDevServer: flat peaceful world config installed.')
+    }
+}
+
+tasks.matching { it.name == 'runServer' }.configureEach {
+    dependsOn prepareDevServer
+}
+
+// --- Dev client window placement --------------------------------------------
+// Minecraft has no window-position startup parameter, and the first window shown is
+// FML's early loading window, created before any mod code exists. So an in-game hook
+// can only move the window AFTER it has flashed up on the primary monitor for several
+// seconds, which is worse than useless on a multi-monitor desk. SnapDevWindow.ps1 runs
+// as a separate process and races the game: it waits for the window, hides it, moves
+// it, and shows it again. DevClientWindow.java applies the same position from inside
+// the game as a fallback for non-Windows machines.
+var snapDevWindow = tasks.register('snapDevWindow') {
+    description = 'Moves the dev client window onto the monitor given by dev_window_x/y.'
+    doLast {
+        if (!System.getProperty('os.name').toLowerCase().contains('windows')) {
+            logger.info('snapDevWindow: not Windows, leaving the window where it lands.')
+            return
+        }
+        if (!dev_window_x?.trim() || !dev_window_y?.trim()) {
+            logger.info('snapDevWindow: dev_window_x/y not set, skipping.')
+            return
+        }
+        var script = rootProject.file('tools/SnapDevWindow.ps1')
+        // Detached on purpose: this has to outlive the task and run WHILE the game
+        // starts, so it cannot be a blocking exec.
+        new ProcessBuilder('powershell', '-NoProfile', '-ExecutionPolicy', 'Bypass',
+                '-File', script.absolutePath,
+                '-X', dev_window_x.trim(), '-Y', dev_window_y.trim())
+                .redirectErrorStream(true)
+                .redirectOutput(ProcessBuilder.Redirect.DISCARD)
+                .start()
+        logger.lifecycle("snapDevWindow: watching for the client window, will place it at ${dev_window_x},${dev_window_y}.")
+    }
+}
+
+tasks.matching { it.name in ['runClient', 'runClientJoin'] }.configureEach {
+    dependsOn snapDevWindow
+}
+
+// The dev harness stays in the repo - it is how a change gets verified without a human
+// at the keyboard - but must never reach players, so strip it from the published jar.
+// Dev runs are unaffected: they run from the compiled classes directory, not this jar.
+tasks.named('jar') {
+    exclude 'nl/ljack2k/anvilous/dev/**'
+    exclude 'nl/ljack2k/anvilous/client/DevClientWindow*'
+    exclude 'nl/ljack2k/anvilous/client/ClientScreenshot*'
 }
 
 // Drop the freshly built jar into a local launcher instance so a rebuild is
