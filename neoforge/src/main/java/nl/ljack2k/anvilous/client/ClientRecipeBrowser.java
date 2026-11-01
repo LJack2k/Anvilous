@@ -20,7 +20,7 @@ public final class ClientRecipeBrowser {
     }
 
     public static void show(boolean isItem, ResourceLocation what) {
-        if (tryJei(isItem, what) || tryEmi(isItem, what)) {
+        if (tryJei(isItem, what) || tryEmi(isItem, what) || tryRei(isItem, what)) {
             return;
         }
         Anvilous.LOGGER.info("show_recipes: no recipe browser had anything for {}", what);
@@ -40,6 +40,15 @@ public final class ClientRecipeBrowser {
             return nl.ljack2k.anvilous.compat.emi.AnvilousEmiPlugin.show(isItem, what);
         } catch (Throwable missing) {
             Anvilous.LOGGER.info("show_recipes: no EMI ({})", missing.toString());
+            return false;
+        }
+    }
+
+    private static boolean tryRei(boolean isItem, ResourceLocation what) {
+        try {
+            return nl.ljack2k.anvilous.compat.rei.AnvilousReiPlugin.show(isItem, what);
+        } catch (Throwable missing) {
+            Anvilous.LOGGER.info("show_recipes: no REI ({})", missing.toString());
             return false;
         }
     }

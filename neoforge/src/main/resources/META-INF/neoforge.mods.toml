@@ -55,3 +55,12 @@ type = "optional"
 versionRange = "${emi_version_range}"
 ordering = "NONE"
 side = "CLIENT"
+
+# And REI. Its own bridge for JEI plugins is published for 1.16.5 Forge only, so
+# without the plugin in compat.rei a REI user sees nothing of ours at all.
+[[dependencies.${mod_id}]]
+modId = "roughlyenoughitems"
+type = "optional"
+versionRange = "${rei_version_range}"
+ordering = "NONE"
+side = "CLIENT"

@@ -38,6 +38,11 @@ repositories {
         url = 'https://repo.sleeping.town/'
         content { includeGroup 'dev.emi' }
     }
+    maven {
+        name = 'shedaniel'
+        url = 'https://maven.shedaniel.me/'
+        content { includeGroupByRegex 'me.shedaniel.*'; includeGroup 'dev.architectury' }
+    }
     flatDir { dirs 'libs' }
 }
 
@@ -58,8 +63,15 @@ dependencies {
     if (recipeViewer in ['jei', 'both']) {
         runtimeOnly "mezz.jei:jei-${minecraft_version}-neoforge:${jei_version}"
     }
+    // REI splits its API from the mod. The default plugin is vanilla's own recipes; we need
+    // neither it nor the full mod to compile, only the api artifact.
+    compileOnly "me.shedaniel:RoughlyEnoughItems-api-neoforge:${rei_version}"
+
     if (recipeViewer in ['emi', 'both']) {
         runtimeOnly "dev.emi:emi-neoforge:${emi_version}"
+    }
+    if (recipeViewer == 'rei') {
+        runtimeOnly "me.shedaniel:RoughlyEnoughItems-neoforge:${rei_version}"
     }
 }
 
@@ -133,7 +145,8 @@ tasks.named('processResources', ProcessResources).configure {
         mod_authors             : mod_authors,
         mod_description         : mod_description,
         jei_version_range       : jei_version_range,
-        emi_version_range       : emi_version_range
+        emi_version_range       : emi_version_range,
+        rei_version_range       : rei_version_range
     ]
     inputs.properties replaceProperties
 
