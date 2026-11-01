@@ -113,7 +113,7 @@ a mixin on `SmithingMenu`; it is in `nl.ljack2k.anvilous.mixin`.
 ## Combine recipes
 
 Two of the same item, their durability added and their enchantments merged — the anvil's
-third trick, and the only repair some items have:
+third trick, and the one that needs no material at all:
 
 ```json
 {
@@ -123,9 +123,14 @@ third trick, and the only repair some items have:
 }
 ```
 
-Tool in the base slot, the sacrifice in the addition slot. Nine vanilla items have no
-material repair at all — bows, crossbows, fishing rods, shears, tridents, flint and steel,
-brushes and the two sticks-on-a-string — so without this they cannot be repaired here at all.
+Tool in the base slot, the sacrifice in the addition slot.
+
+This is not the poor relation of material repair, and treating it as one is a mistake worth
+not repeating. It is the route you have when you own the item and not the material: a damaged
+pickaxe out of a chest, long before there is any ore to mend it with. It is also the only way
+to merge the enchantments of two tools, which no amount of material can do. For nine vanilla
+items — bows, crossbows, fishing rods, shears, tridents, flint and steel, brushes and the two
+sticks-on-a-string — it is the only repair there is, because they have no material at all.
 
 The durability sum is vanilla's, bonus included: both items' remaining durability plus 12% of
 the maximum. `bonus_percent` changes that for packs that want to; leave it out for parity.
@@ -183,7 +188,7 @@ The smithing table never reads it, so repairs here stay cheap no matter what it 
 
 ## Built-in recipes
 
-Anvilous ships 110 recipes, covering every damageable item and every enchantment in vanilla.
+Anvilous ships 169 recipes, covering every damageable item and every enchantment in vanilla.
 None of them are a new balance. Every number in them was read out of the game rather than
 decided by us, so what they do is move vanilla's own prices to a block that does not charge
 experience and does not get more expensive the more you use it.
@@ -197,12 +202,16 @@ Both sets come out of generators in the dev harness — `/anvilous dump_repair <
 `/anvilous dump_enchant` — so a pack with its own tiers regenerates them rather than editing
 a hundred files, and run inside a modpack they cover its modded tools and enchantments too.
 
-### Repair — 68 recipes
+### Repair and combining — 127 recipes
 
-59 `smithing_repair`, and 9 `smithing_combine` for the items vanilla gives no material repair
-at all. Each repair names the material `Item#isValidRepairItem` already accepts for that item,
-at `percent: 25` — the same quarter of maximum durability an anvil restores per unit — and
-uses a `c:` tag wherever one exists, so a mod's own iron or leather works too.
+A `smithing_combine` for **every** damageable item, 68 of them, and 59 `smithing_repair` for
+the ones that have a material. Vanilla's anvil combines any two of the same damageable item —
+`AnvilMenu` asks nothing but "same item, damageable?" — so anything less is not an anvil
+replacement.
+
+Each repair names the material `Item#isValidRepairItem` already accepts for that item, at
+`percent: 25` — the same quarter of maximum durability an anvil restores per unit — and uses
+a `c:` tag wherever one exists, so a mod's own iron or leather works too.
 
 ### Enchanting — 42 recipes
 

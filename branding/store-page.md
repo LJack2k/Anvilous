@@ -52,15 +52,18 @@ that eventually produces *Too Expensive!* is reset rather than raised.
 
 ## It works out of the box
 
-110 recipes ship enabled, covering **every damageable item and every enchantment in vanilla**.
+169 recipes ship enabled, covering **every damageable item and every enchantment in vanilla**.
 
 They are not a new balance. Every number in them was read out of the game rather than decided
 by us:
 
 - Each repair uses the material vanilla's own anvil already accepts for that item, at 25% per
   unit — the same quarter an anvil restores. Nine items have no material repair at all (bows,
-  crossbows, fishing rods, shears, tridents, flint and steel, brushes, the two sticks), so
-  those get combining instead, exactly as the anvil treats them.
+  crossbows, fishing rods, shears, tridents, flint and steel, brushes, the two sticks), so for
+  those combining is the only route, exactly as the anvil treats them.
+- Every damageable item can be combined, not only those nine, because the anvil combines any
+  two of the same item — and combining is what you have when you own the tool and not the
+  material, like a damaged pickaxe out of a chest before you have found any diamonds.
 - Each enchantment is priced from its `anvil_cost`: the levels an anvil bills per level of the
   enchantment, halved for a book. One material item per experience level vanilla would have
   taken. Sharpness V costs 5, Mending costs 2, Thorns III costs 12.

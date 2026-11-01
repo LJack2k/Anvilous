@@ -1,0 +1,5 @@
+{
+  "type": "anvilous:smithing_combine",
+  "base": { "item": "minecraft:wooden_sword" },
+  "repair_cost": "reset"
+}

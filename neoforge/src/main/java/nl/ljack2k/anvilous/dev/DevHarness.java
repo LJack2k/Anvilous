@@ -260,8 +260,12 @@ public final class DevHarness {
      * which gets the awkward ones right (elytra take phantom membrane, shields take planks)
      * and, run inside a modpack, covers every modded tool in it too.
      *
-     * <p>Items with no material repair at all are reported rather than written: in vanilla
-     * those can only be fixed by combining two of them, which this mod does not do yet.
+     * <p>Every damageable item also gets a combine recipe, not only the ones with no material
+     * repair. Vanilla's anvil combines any two of the same damageable item — {@code AnvilMenu}
+     * asks nothing but "same item, damageable?" — and combining is not the poor relation of
+     * material repair it first looks like. It is the route you have when you own the item and
+     * not the material: a damaged pickaxe out of a chest, before there is any ore to mend it
+     * with. Shipping it for nine items missed the case the feature is for.
      */
     private static int dumpRepair(CommandSourceStack source, int percent) {
         List<Item> damageable = BuiltInRegistries.ITEM.stream()
@@ -282,18 +286,21 @@ public final class DevHarness {
                         .toList();
 
                 ResourceLocation id = BuiltInRegistries.ITEM.getKey(item);
+
+                // Prefixed, because an item now has both and they cannot share a path.
+                Files.writeString(out.resolve("combine_" + id.getPath() + ".json"), """
+                        {
+                          "type": "anvilous:smithing_combine",
+                          "base": { "item": "%s" },
+                          "repair_cost": "reset"
+                        }
+                        """.formatted(id));
+                written++;
+
                 if (materials.isEmpty()) {
-                    // No material repair exists for these, so combining two is the only way
-                    // to fix them - which is exactly what the anvil does with them.
+                    // For these the combine above is the only repair there is, which is
+                    // exactly how the anvil treats them too.
                     noMaterial.add(id.toString());
-                    Files.writeString(out.resolve(id.getPath() + ".json"), """
-                            {
-                              "type": "anvilous:smithing_combine",
-                              "base": { "item": "%s" },
-                              "repair_cost": "reset"
-                            }
-                            """.formatted(id));
-                    written++;
                     continue;
                 }
 

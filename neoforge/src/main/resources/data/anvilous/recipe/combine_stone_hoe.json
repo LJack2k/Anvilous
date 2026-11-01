@@ -1,0 +1,5 @@
+{
+  "type": "anvilous:smithing_combine",
+  "base": { "item": "minecraft:stone_hoe" },
+  "repair_cost": "reset"
+}

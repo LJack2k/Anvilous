@@ -1,0 +1,5 @@
+{
+  "type": "anvilous:smithing_combine",
+  "base": { "item": "minecraft:netherite_leggings" },
+  "repair_cost": "reset"
+}
