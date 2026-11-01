@@ -12,6 +12,7 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.tags.TagKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -39,7 +40,12 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Dev-only test harness — active only when {@code -Danvilous.devHarness} is set, which the
@@ -228,14 +234,15 @@ public final class DevHarness {
                     continue;
                 }
 
+                List<String> entries = asTagsWherePossible(materials, percent);
+
                 StringBuilder json = new StringBuilder();
                 json.append("{\n  \"type\": \"anvilous:smithing_repair\",\n")
                         .append("  \"base\": { \"item\": \"").append(id).append("\" },\n")
                         .append("  \"materials\": [\n");
-                for (int i = 0; i < materials.size(); i++) {
-                    json.append("    { \"item\": \"").append(materials.get(i))
-                            .append("\", \"percent\": ").append(percent).append(" }")
-                            .append(i < materials.size() - 1 ? ",\n" : "\n");
+                for (int i = 0; i < entries.size(); i++) {
+                    json.append("    ").append(entries.get(i))
+                            .append(i < entries.size() - 1 ? ",\n" : "\n");
                 }
                 json.append("  ],\n  \"keep_enchantments\": true,\n  \"repair_cost\": \"reset\"\n}\n");
 
@@ -255,6 +262,49 @@ public final class DevHarness {
                 damageable.size() + " damageable items, " + finalWritten + " recipes written to "
                         + out + ", " + noMaterial.size() + " have no material repair"), false);
         return 1;
+    }
+
+    /**
+     * Rewrites a flat list of repair items as tags wherever a tag covers them exactly.
+     *
+     * <p>{@code isValidRepairItem} answers per item and knows nothing about tags, so a shield
+     * comes back as eleven plank types and an iron tool as one hard-coded {@code iron_ingot}.
+     * Written out like that the pack is pinned to whatever happened to be installed when it
+     * was generated — the opposite of why tags exist. So a tag is used whenever every item in
+     * it is a valid repair material (never a superset, which would accept things the game
+     * would not), biggest tag first, and anything left over stays an item.
+     */
+    private static List<String> asTagsWherePossible(List<ResourceLocation> materials, int percent) {
+        Set<ResourceLocation> remaining = new LinkedHashSet<>(materials);
+        List<String> entries = new ArrayList<>();
+
+        List<Map.Entry<TagKey<Item>, Set<ResourceLocation>>> usable = BuiltInRegistries.ITEM.getTags()
+                .map(pair -> Map.<TagKey<Item>, Set<ResourceLocation>>entry(
+                        pair.getFirst(),
+                        pair.getSecond().stream()
+                                .map(holder -> BuiltInRegistries.ITEM.getKey(holder.value()))
+                                .collect(Collectors.toCollection(LinkedHashSet::new))))
+                .filter(entry -> !entry.getValue().isEmpty())
+                .filter(entry -> remaining.containsAll(entry.getValue()))
+                .sorted(Comparator
+                        .<Map.Entry<TagKey<Item>, Set<ResourceLocation>>>comparingInt(e -> -e.getValue().size())
+                        // Prefer the common namespace: that is the one other mods also populate.
+                        .thenComparing(e -> e.getKey().location().getNamespace().equals("c") ? 0 : 1)
+                        .thenComparing(e -> e.getKey().location().toString()))
+                .collect(Collectors.toCollection(ArrayList::new));
+
+        for (var tag : usable) {
+            if (!remaining.containsAll(tag.getValue())) {
+                continue;
+            }
+            remaining.removeAll(tag.getValue());
+            entries.add("{ \"tag\": \"" + tag.getKey().location() + "\", \"percent\": " + percent + " }");
+        }
+
+        for (ResourceLocation leftover : remaining) {
+            entries.add("{ \"item\": \"" + leftover + "\", \"percent\": " + percent + " }");
+        }
+        return entries;
     }
 
     /** The enchanting half of {@link #simulate}, driven through the same real menu. */
