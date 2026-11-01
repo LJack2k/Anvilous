@@ -7,7 +7,7 @@ import net.neoforged.neoforge.common.ModConfigSpec;
  *
  * <p>The three files under {@code resources/defaults_*} are content, not machinery: the
  * recipe types, the smithing-table behaviour and the viewer plugins all work with none of
- * them loaded. A pack with its own progression wants exactly that — the engine, and none of
+ * them loaded. A pack with its own progression wants exactly that â the engine, and none of
  * our opinion about what a repair should cost. There is no way to delete a recipe from JSON,
  * so without a switch here the only way to start empty would be to override all 169 files.
  *
@@ -41,6 +41,28 @@ public final class AnvilousConfig {
             .comment("Enchanting recipes for every vanilla enchantment (42), priced from anvil_cost.")
             .define("enchant", true);
 
+    /**
+     * The recipe generators and the combine simulation, as real commands.
+     *
+     * <p>Off by default because they are a pack-making tool, not a feature: { dump_*}
+     * writes files into the game directory, and nobody playing the pack has any use for them.
+     *
+     * <p>On, they are the cheapest way to cover a modpack's own content. The generators read
+     * { isValidRepairItem} and { anvil_cost} out of the loaded registries, so run
+     * inside a pack they emit correct recipes for its tools and enchantments, not just
+     * vanilla's — which is how the sets this mod ships were made in the first place.
+     */
+    public static final ModConfigSpec.BooleanValue TOOL_COMMANDS = BUILDER.pop()
+            .comment("Register the pack-making commands under /anvilous (operator only).",
+                    "dump_repair <percent>, dump_combine and dump_enchant write a ready-to-copy",
+                    "datapack folder into <game dir>/anvilous-generated, covering every item and",
+                    "enchantment the running pack has loaded — modded ones included.",
+                    "simulate_combine <item> <damage_a> <damage_b> [enchantment] [level] runs two",
+                    "items through a real smithing menu and reports what came out, which is the",
+                    "one question a recipe file cannot answer.")
+            .push("tools")
+            .define("commands", false);
+
     public static final ModConfigSpec SPEC = BUILDER.pop().build();
 
     private AnvilousConfig() {}
@@ -49,10 +71,23 @@ public final class AnvilousConfig {
      * Reads a switch, treating "not loaded yet" as on.
      *
      * <p>Pack finders are built once the configs are in, so this should never fall through in
-     * practice — but reading an unloaded spec throws, and failing closed would silently ship an
+     * practice â but reading an unloaded spec throws, and failing closed would silently ship an
      * empty game to anyone whose config did not come up.
      */
     public static boolean enabled(ModConfigSpec.BooleanValue value) {
         return !SPEC.isLoaded() || value.get();
+    }
+
+    /**
+     * Whether the pack-making commands should be registered.
+     *
+     * <p>Not { #enabled}: that treats an unloaded spec as on, which is right for the
+     * recipe sets (shipping the defaults is the safe failure) and wrong here, where it would
+     * hand every player a set of commands that write files. Commands are registered at server
+     * start, long after the configs are in, so an unloaded spec here means something is wrong
+     * and off is the answer.
+     */
+    public static boolean toolCommands() {
+        return SPEC.isLoaded() && TOOL_COMMANDS.get();
     }
 }

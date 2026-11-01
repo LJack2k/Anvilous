@@ -197,9 +197,42 @@ A pack replaces any of them by shipping a file at the same path: `data/anvilous/
 in a datapack wins over the built-in copy. It needs no thought about load order — the three
 sets are built-in datapacks sitting at the bottom of the stack, so anything else beats them.
 
-Both sets come out of generators in the dev harness — `/anvilous dump_repair <percent>` and
-`/anvilous dump_enchant` — so a pack with its own tiers regenerates them rather than editing
-a hundred files, and run inside a modpack they cover its modded tools and enchantments too.
+All three sets come out of generators that ship with the mod, so a pack with its own tiers
+regenerates them rather than editing a hundred files. See **Pack-making commands** below.
+
+### Pack-making commands
+
+Off by default — they write files into the game directory and no player needs them. Turn them
+on in `config/anvilous-common.toml`:
+
+```toml
+[tools]
+	commands = true
+```
+
+That registers four commands under `/anvilous`, all operator-only:
+
+| Command | What it writes |
+| --- | --- |
+| `dump_repair <percent>` | a `smithing_repair` per item that has a repair material |
+| `dump_combine` | a `smithing_combine` per damageable item |
+| `dump_enchant` | a `smithing_enchant` per enchantment, priced from `anvil_cost` |
+| `simulate_combine <item> <damage_a> <damage_b> [enchantment] [level]` | nothing — it reports |
+
+The three `dump_*` commands write into `<game dir>/anvilous-generated/defaults_<set>/`, laid
+out exactly as the mod's own packs are, so turning the output into a datapack is a folder copy.
+
+The point is what they read. They ask the loaded registries — `Item#isValidRepairItem` and
+each enchantment's `anvil_cost` and `supported_items` — not a table somebody typed. Run inside
+a modpack they therefore emit correct recipes for **its** tools and enchantments, not just
+vanilla's. The three sets this mod ships were produced by exactly these commands; running them
+on a vanilla server reproduces them byte for byte.
+
+`simulate_combine` is the debugging one. Combining is where "why did nothing happen?" comes
+from, because the answer is never in the recipe file — it is the durability sum, the
+enchantment merge, or no recipe matching at all. It puts two items through a real
+`SmithingMenu` and says which. It needs a player to run it, so it is an in-game command rather
+than a console one.
 
 ### Starting from nothing
 
