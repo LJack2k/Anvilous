@@ -1,2 +1,85 @@
 # Anvilous
-Minecraft mod that teaches the smithing table to repair tools and armor using datapack-defined materials, each with its own percentage - no anvil, no XP cost
+
+Repair your gear at the **smithing table**, with materials and amounts a datapack decides —
+and leave the anvil's experience bill behind.
+
+**Minecraft 1.21.1 · NeoForge**
+
+> **Status: in design.** Nothing is built yet. This README is the agreed spec; the format
+> below is what the mod is being written against.
+
+---
+
+## What it does
+
+Put a damaged tool in the smithing table's base slot and a material in the addition slot.
+A recipe says which materials that tool accepts and how much durability each one gives, as a
+percentage of the item's maximum. The repaired tool comes out the other side with every
+enchantment and component untouched, and it costs no experience — only the material.
+
+The anvil can already do some of this, badly. It charges levels, it raises the price every
+time you use it, and eventually it refuses outright. Anvilous moves the job to a block that
+doesn't care.
+
+> **On its own it does nothing.** No recipes ship enabled by default beyond the starter pack
+> below — a pack decides which tools can be repaired, by what, and for how much.
+
+## Recipes
+
+One file per tool or tool group, in `data/<namespace>/recipe/`:
+
+```json
+{
+  "type": "anvilous:smithing_repair",
+  "base": { "tag": "c:tools/pickaxes" },
+  "materials": [
+    { "tag":  "c:ingots/iron",             "percent": 25 },
+    { "item": "minecraft:diamond",         "percent": 50 },
+    { "item": "minecraft:netherite_ingot", "percent": 100 }
+  ],
+  "max_per_craft": 4,
+  "keep_enchantments": true,
+  "repair_cost": "reset"
+}
+```
+
+### Fields
+
+| Field | Meaning |
+| --- | --- |
+| `base` | The item being repaired. A `tag` or an `item`. |
+| `materials` | A list; each entry is a `tag` **or** an `item`, with its own `percent`. Tags and items can be mixed freely in one recipe. |
+| `percent` | Durability restored **per material item**, as a percentage of the tool's maximum. A 1562-durability diamond pickaxe at 100/1562, repaired with a 50% material, comes out at 881/1562. Flat, predictable, independent of how damaged the tool is. |
+| `max_per_craft` | How many material items a single craft may consume. Caps the repair so one click can't necessarily fill the bar. |
+| `keep_enchantments` | Keeps enchantments and components on the repaired item. Normally `true` — it is the reason this mod exists. |
+| `repair_cost` | What to do with the item's hidden anvil-use counter: `reset`, `keep` or `increase`. See below. |
+| `template` | *Optional.* An item required in the template slot, if a pack wants the repair gated behind something. Omit it and the slot stays empty. |
+
+### Stacking
+
+Materials stack. With `percent: 25` and four iron in the slot, one craft repairs 100% and
+consumes all four — up to whatever `max_per_craft` allows.
+
+By default a craft consumes everything in the slot that it is allowed to, even if the tool
+fills up before the last item is used. A config option turns on **partial consumption**,
+which returns what wasn't needed.
+
+### `repair_cost`
+
+Every item carries a hidden counter of how many times it has been through an anvil. The anvil
+charges it, doubles it (`0 → 1 → 3 → 7 → 15 → 31`), and eventually says *Too Expensive!*.
+The smithing table never reads it, so repairs here stay cheap no matter what it says.
+
+- `reset` *(default)* — set it back to zero. The tool comes out clean for any later anvil use.
+- `keep` — leave it alone.
+- `increase` — grow it the way the anvil would, for packs that want repairs to get costlier.
+
+## Starter recipes
+
+A built-in pack translates vanilla's own repair rules: `percent: 25`, `max_per_craft: 4`, the
+repair material for each tier. That is exactly what an anvil gives you, minus the experience.
+Packs are expected to replace or extend it.
+
+## License
+
+MIT
