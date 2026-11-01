@@ -44,6 +44,7 @@ import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -189,7 +190,21 @@ public final class DevHarness {
                                                 ctx.getSource(),
                                                 ResourceLocationArgument.getId(ctx, "enchantment"),
                                                 IntegerArgumentType.getInteger(ctx, "level"),
-                                                IntegerArgumentType.getInteger(ctx, "materials")))))));
+                                                IntegerArgumentType.getInteger(ctx, "materials"),
+                                                ResourceLocation.withDefaultNamespace("diamond"),
+                                                ResourceLocation.withDefaultNamespace("diamond_pickaxe")))
+                                        // Which material and which tool only became worth
+                                        // asking once the shipped recipes stopped all being
+                                        // about diamonds and pickaxes.
+                                        .then(Commands.argument("material", ResourceLocationArgument.id())
+                                                .then(Commands.argument("tool", ResourceLocationArgument.id())
+                                                        .executes(ctx -> simulateEnchant(
+                                                                ctx.getSource(),
+                                                                ResourceLocationArgument.getId(ctx, "enchantment"),
+                                                                IntegerArgumentType.getInteger(ctx, "level"),
+                                                                IntegerArgumentType.getInteger(ctx, "materials"),
+                                                                ResourceLocationArgument.getId(ctx, "material"),
+                                                                ResourceLocationArgument.getId(ctx, "tool")))))))));
 
         root.then(Commands.literal("simulate_combine")
                 .then(Commands.argument("item", ResourceLocationArgument.id())
@@ -217,6 +232,9 @@ public final class DevHarness {
                 .then(Commands.argument("percent", IntegerArgumentType.integer(1, 100))
                         .executes(ctx -> dumpRepair(ctx.getSource(),
                                 IntegerArgumentType.getInteger(ctx, "percent")))));
+
+        root.then(Commands.literal("dump_enchant")
+                .executes(ctx -> dumpEnchant(ctx.getSource())));
 
         event.getDispatcher().register(root);
     }
@@ -293,6 +311,106 @@ public final class DevHarness {
         source.sendSuccess(() -> Component.literal(
                 damageable.size() + " damageable items, " + finalWritten + " recipes written to "
                         + out + ", " + noMaterial.size() + " have no material repair"), false);
+        return 1;
+    }
+
+    /**
+     * The material each {@code anvil_cost} band is paid in.
+     *
+     * <p>Vanilla sorts its enchantments into exactly four bands — 1, 2, 4 and 8 — and that
+     * sorting is the game's own opinion about which enchantments are precious. Reusing it
+     * means the four materials are not a ladder someone invented: Sharpness sits in the same
+     * band as Protection because vanilla put it there.
+     */
+    private static ResourceLocation enchantTier(int anvilCost) {
+        String item = anvilCost <= 1 ? "lapis_lazuli"
+                : anvilCost <= 2 ? "amethyst_shard"
+                : anvilCost <= 4 ? "ender_pearl"
+                : "blaze_powder";
+        return ResourceLocation.withDefaultNamespace(item);
+    }
+
+    /**
+     * A {@code c:} tag holding exactly this one item, if one exists.
+     *
+     * <p>Exactly, never a superset: {@code c:gems} would also accept diamonds, which is not
+     * what the price says. A tag of precisely this item is free to widen — that is where
+     * another mod's lapis lands — without changing what the recipe means.
+     */
+    private static String materialEntry(ResourceLocation item, int perLevel) {
+        String source = BuiltInRegistries.ITEM.getTags()
+                .filter(pair -> pair.getFirst().location().getNamespace().equals("c"))
+                .filter(pair -> pair.getSecond().size() == 1)
+                .filter(pair -> pair.getSecond().stream().allMatch(
+                        holder -> BuiltInRegistries.ITEM.getKey(holder.value()).equals(item)))
+                .map(pair -> "\"tag\": \"" + pair.getFirst().location() + "\"")
+                .findFirst()
+                .orElse("\"item\": \"" + item + "\"");
+        return "{ " + source + ", \"per_level\": " + perLevel + " }";
+    }
+
+    /**
+     * Writes one enchanting recipe per enchantment, priced from the game's own numbers.
+     *
+     * <p>There is no vanilla recipe to copy here the way {@code isValidRepairItem} gives one
+     * for repair — vanilla charges experience. But it does carry a number for exactly this
+     * job: {@code anvil_cost}, the levels an anvil bills per enchantment level, halved for a
+     * book. So the price is that same figure, one material item per experience level vanilla
+     * would have taken. Sharpness V costs five, Mending costs two, Thorns III costs twelve.
+     *
+     * <p>Which material comes from the band, and what the recipe may be applied to comes from
+     * the enchantment's own {@code supported_items}, so a modded enchantment generates a
+     * sensible recipe without anybody writing one.
+     */
+    private static int dumpEnchant(CommandSourceStack source) {
+        var registry = source.registryAccess().lookupOrThrow(Registries.ENCHANTMENT);
+        Path out = FMLPaths.GAMEDIR.get().resolve("anvilous-generated/data/anvilous/recipe");
+        List<String> skipped = new ArrayList<>();
+        int written = 0;
+
+        try {
+            Files.createDirectories(out);
+            for (Holder.Reference<Enchantment> holder : registry.listElements().toList()) {
+                ResourceLocation id = holder.key().location();
+                Enchantment enchantment = holder.value();
+
+                // An inline list of items rather than a tag cannot be written as a base
+                // ingredient here, and in vanilla there are none - so say so rather than
+                // quietly leaving a hole in the set.
+                Optional<TagKey<Item>> baseTag = enchantment.definition().supportedItems().unwrapKey();
+                if (baseTag.isEmpty()) {
+                    skipped.add(id + " (supported_items is a literal list, not a tag)");
+                    continue;
+                }
+
+                int anvilCost = enchantment.getAnvilCost();
+                int perLevel = Math.max(1, anvilCost / 2);
+
+                Files.writeString(out.resolve("enchant_" + id.getPath() + ".json"), """
+                        {
+                          "type": "anvilous:smithing_enchant",
+                          "enchantment": "%s",
+                          "base": { "tag": "%s" },
+                          "materials": [
+                            %s
+                          ],
+                          "repair_cost": "reset"
+                        }
+                        """.formatted(id, baseTag.get().location(),
+                        materialEntry(enchantTier(anvilCost), perLevel)));
+                written++;
+            }
+        } catch (IOException e) {
+            source.sendFailure(Component.literal("Could not write the pack: " + e.getMessage()));
+            return 0;
+        }
+
+        Anvilous.LOGGER.info("dump_enchant: {} written, {} skipped: {}", written, skipped.size(), skipped);
+
+        int finalWritten = written;
+        source.sendSuccess(() -> Component.literal(
+                finalWritten + " enchanting recipes written to " + out
+                        + ", " + skipped.size() + " skipped"), false);
         return 1;
     }
 
@@ -413,7 +531,8 @@ public final class DevHarness {
 
     /** The enchanting half of {@link #simulate}, driven through the same real menu. */
     private static int simulateEnchant(CommandSourceStack source, ResourceLocation enchantment,
-                                       int level, int materials)
+                                       int level, int materials,
+                                       ResourceLocation material, ResourceLocation tool)
             throws com.mojang.brigadier.exceptions.CommandSyntaxException {
         ServerPlayer player = source.getPlayerOrException();
         ServerLevel serverLevel = player.serverLevel();
@@ -438,18 +557,27 @@ public final class DevHarness {
         ItemStack book = new ItemStack(Items.ENCHANTED_BOOK);
         EnchantmentHelper.updateEnchantments(book, mutable -> mutable.set(holder, level));
 
+        Item materialItem = BuiltInRegistries.ITEM.getOptional(material).orElse(null);
+        Item toolItem = BuiltInRegistries.ITEM.getOptional(tool).orElse(null);
+        if (materialItem == null || toolItem == null) {
+            source.sendSuccess(() -> Component.literal(
+                    "No such item: " + (materialItem == null ? material : tool)), false);
+            return 0;
+        }
+
+        String label = enchantment.getPath() + " " + level + " on " + tool.getPath()
+                + " + " + materials + " " + material.getPath();
+
         SmithingMenu menu = new SmithingMenu(1, player.getInventory(),
                 ContainerLevelAccess.create(serverLevel, pos));
         menu.getSlot(SmithingMenu.TEMPLATE_SLOT).set(book);
-        menu.getSlot(SmithingMenu.BASE_SLOT).set(new ItemStack(Items.DIAMOND_PICKAXE));
-        menu.getSlot(SmithingMenu.ADDITIONAL_SLOT).set(new ItemStack(Items.DIAMOND, materials));
+        menu.getSlot(SmithingMenu.BASE_SLOT).set(new ItemStack(toolItem));
+        menu.getSlot(SmithingMenu.ADDITIONAL_SLOT).set(new ItemStack(materialItem, materials));
         menu.createResult();
 
         ItemStack result = menu.getSlot(SmithingMenu.RESULT_SLOT).getItem();
         if (result.isEmpty()) {
-            source.sendSuccess(() -> Component.literal(
-                    enchantment.getPath() + " " + level + " + " + materials
-                            + " diamond(s) -> NO RECIPE MATCH"), false);
+            source.sendSuccess(() -> Component.literal(label + " -> NO RECIPE MATCH"), false);
             return 0;
         }
 
@@ -460,8 +588,7 @@ public final class DevHarness {
         boolean bookGone = menu.getSlot(SmithingMenu.TEMPLATE_SLOT).getItem().isEmpty();
 
         source.sendSuccess(() -> Component.literal(
-                enchantment.getPath() + " " + level + " + " + materials + " diamond(s)"
-                        + " -> got level " + got
+                label + " -> got level " + got
                         + " | consumed " + used
                         + " | book consumed " + bookGone), false);
         return 1;

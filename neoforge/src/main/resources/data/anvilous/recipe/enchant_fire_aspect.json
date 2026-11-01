@@ -1,0 +1,9 @@
+{
+  "type": "anvilous:smithing_enchant",
+  "enchantment": "minecraft:fire_aspect",
+  "base": { "tag": "minecraft:enchantable/fire_aspect" },
+  "materials": [
+    { "tag": "c:ender_pearls", "per_level": 2 }
+  ],
+  "repair_cost": "reset"
+}

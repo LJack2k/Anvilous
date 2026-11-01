@@ -167,27 +167,57 @@ The smithing table never reads it, so repairs here stay cheap no matter what it 
 
 ## Built-in recipes
 
-Anvilous ships 68 recipes, one for every damageable item in vanilla — 59 `smithing_repair`,
-and 9 `smithing_combine` for the items that have no material repair at all. They are not a
-new balance: they are vanilla's own rules moved to a block that does not charge experience.
-Each repair names the material `Item#isValidRepairItem` already accepts for that item, at
-`percent: 25` — the same quarter of maximum durability an anvil restores per unit — and uses
-a `c:` tag wherever one exists, so a mod's own iron or leather works too.
+Anvilous ships 110 recipes, covering every damageable item and every enchantment in vanilla.
+None of them are a new balance. Every number in them was read out of the game rather than
+decided by us, so what they do is move vanilla's own prices to a block that does not charge
+experience and does not get more expensive the more you use it.
 
 A pack replaces any of them by shipping a file at the same path: `data/anvilous/recipe/diamond_pickaxe.json`
 in a datapack wins over the mod's copy. There is no way to delete a recipe from JSON, but one
 whose `base` matches nothing is inert, so overriding with a recipe for an item that does not
 exist is how a pack turns one off.
 
-The generator that wrote them is in the dev harness (`/anvilous dump_repair <percent>`), so a
-pack with its own tiers can regenerate the whole set rather than hand-write it.
+Both sets come out of generators in the dev harness — `/anvilous dump_repair <percent>` and
+`/anvilous dump_enchant` — so a pack with its own tiers regenerates them rather than editing
+a hundred files, and run inside a modpack they cover its modded tools and enchantments too.
 
-### Enchanting is not included
+### Repair — 68 recipes
 
-No `smithing_enchant` recipes ship. Vanilla prices enchanting in experience, so there is no
-parity to translate — what a Mending book ought to cost in materials is a pack's decision,
-not this mod's. Two worked examples sit in [`examples/enchanting/`](examples/enchanting) to
-copy from.
+59 `smithing_repair`, and 9 `smithing_combine` for the items vanilla gives no material repair
+at all. Each repair names the material `Item#isValidRepairItem` already accepts for that item,
+at `percent: 25` — the same quarter of maximum durability an anvil restores per unit — and
+uses a `c:` tag wherever one exists, so a mod's own iron or leather works too.
+
+### Enchanting — 42 recipes
+
+Vanilla prices enchanting in experience, which looks at first like there is nothing to
+translate. But it does carry a number meant for exactly this job: `anvil_cost`, the levels an
+anvil bills per level of the enchantment, halved when the source is a book. So that is the
+price, one material item per experience level vanilla would have taken.
+
+`anvil_cost` also sorts every vanilla enchantment into four bands, and that sorting is the
+game's own opinion about which enchantments are precious — Sharpness sits with Protection
+because vanilla put it there, not because we agreed with each other about it. Each band is
+paid in its own material:
+
+| `anvil_cost` | Material | Per level | For example |
+| --- | --- | --- | --- |
+| 1 | `c:gems/lapis` | 1 | Sharpness, Protection, Efficiency, Power, Piercing |
+| 2 | `c:gems/amethyst` | 1 | Unbreaking, Smite, Feather Falling, Loyalty |
+| 4 | `c:ender_pearls` | 2 | Mending, Fortune, Looting, Fire Aspect, Riptide |
+| 8 | `minecraft:blaze_powder` | 4 | Silk Touch, Infinity, Thorns, Channeling, the curses |
+
+So Sharpness V costs 5 lapis, Unbreaking III costs 3 amethyst, Mending costs 2 ender pearls,
+and Thorns III costs 12 blaze powder — the same 12 levels an anvil would have charged. Blaze
+powder is the one entry written as a plain item: nothing in `c:` names it in 1.21.1, and a
+tag that does not exist matches nothing at all rather than complaining.
+
+What each may be applied to is the enchantment's own `supported_items`, so Depth Strider
+lands on boots and Breach on maces without anyone listing them.
+
+One rough edge: a book carrying two enchantments matches both their recipes, and the table
+picks whichever vanilla found first. Splitting such a book is not something a pack can
+express yet.
 
 ## Building
 

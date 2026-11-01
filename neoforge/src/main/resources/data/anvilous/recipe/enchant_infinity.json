@@ -1,0 +1,9 @@
+{
+  "type": "anvilous:smithing_enchant",
+  "enchantment": "minecraft:infinity",
+  "base": { "tag": "minecraft:enchantable/bow" },
+  "materials": [
+    { "item": "minecraft:blaze_powder", "per_level": 4 }
+  ],
+  "repair_cost": "reset"
+}

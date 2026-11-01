@@ -1,8 +1,0 @@
-{
-  "type": "anvilous:smithing_enchant",
-  "enchantment": "minecraft:mending",
-  "base": { "item": "minecraft:diamond_pickaxe" },
-  "materials": [
-    { "item": "minecraft:diamond", "per_level": 4 }
-  ]
-}

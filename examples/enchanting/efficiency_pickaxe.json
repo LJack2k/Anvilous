@@ -1,8 +1,0 @@
-{
-  "type": "anvilous:smithing_enchant",
-  "enchantment": "minecraft:efficiency",
-  "base": { "tag": "minecraft:pickaxes" },
-  "materials": [
-    { "tag": "c:gems/diamond", "per_level": 1 }
-  ]
-}

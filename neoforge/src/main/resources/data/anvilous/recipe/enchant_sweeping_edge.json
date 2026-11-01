@@ -1,0 +1,9 @@
+{
+  "type": "anvilous:smithing_enchant",
+  "enchantment": "minecraft:sweeping_edge",
+  "base": { "tag": "minecraft:enchantable/sword" },
+  "materials": [
+    { "tag": "c:ender_pearls", "per_level": 2 }
+  ],
+  "repair_cost": "reset"
+}

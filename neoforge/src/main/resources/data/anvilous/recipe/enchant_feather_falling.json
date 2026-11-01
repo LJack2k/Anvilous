@@ -1,0 +1,9 @@
+{
+  "type": "anvilous:smithing_enchant",
+  "enchantment": "minecraft:feather_falling",
+  "base": { "tag": "minecraft:enchantable/foot_armor" },
+  "materials": [
+    { "tag": "c:gems/amethyst", "per_level": 1 }
+  ],
+  "repair_cost": "reset"
+}
