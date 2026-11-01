@@ -7,6 +7,7 @@ import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.ResourceLocationArgument;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
@@ -17,6 +18,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.inventory.SmithingMenu;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.enchantment.Enchantment;
@@ -25,12 +27,19 @@ import net.minecraft.world.item.enchantment.ItemEnchantments;
 import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.block.Blocks;
 import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.loading.FMLPaths;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.event.server.ServerStartedEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import nl.ljack2k.anvilous.Anvilous;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Dev-only test harness — active only when {@code -Danvilous.devHarness} is set, which the
@@ -176,7 +185,76 @@ public final class DevHarness {
                                                 IntegerArgumentType.getInteger(ctx, "level"),
                                                 IntegerArgumentType.getInteger(ctx, "materials")))))));
 
+        root.then(Commands.literal("dump_repair")
+                .then(Commands.argument("percent", IntegerArgumentType.integer(1, 100))
+                        .executes(ctx -> dumpRepair(ctx.getSource(),
+                                IntegerArgumentType.getInteger(ctx, "percent")))));
+
         event.getDispatcher().register(root);
+    }
+
+    /**
+     * Writes a starter repair pack derived from the game's own data.
+     *
+     * <p>Vanilla already knows every repair material — {@code Item#isValidRepairItem} is what
+     * the anvil asks — so the baseline is read out of the registry rather than typed by hand,
+     * which gets the awkward ones right (elytra take phantom membrane, shields take planks)
+     * and, run inside a modpack, covers every modded tool in it too.
+     *
+     * <p>Items with no material repair at all are reported rather than written: in vanilla
+     * those can only be fixed by combining two of them, which this mod does not do yet.
+     */
+    private static int dumpRepair(CommandSourceStack source, int percent) {
+        List<Item> damageable = BuiltInRegistries.ITEM.stream()
+                .filter(item -> new ItemStack(item).isDamageableItem())
+                .toList();
+
+        Path out = FMLPaths.GAMEDIR.get().resolve("anvilous-generated/data/anvilous/recipe");
+        List<String> noMaterial = new ArrayList<>();
+        int written = 0;
+
+        try {
+            Files.createDirectories(out);
+            for (Item item : damageable) {
+                ItemStack tool = new ItemStack(item);
+                List<ResourceLocation> materials = BuiltInRegistries.ITEM.stream()
+                        .filter(candidate -> item.isValidRepairItem(tool, new ItemStack(candidate)))
+                        .map(BuiltInRegistries.ITEM::getKey)
+                        .toList();
+
+                ResourceLocation id = BuiltInRegistries.ITEM.getKey(item);
+                if (materials.isEmpty()) {
+                    noMaterial.add(id.toString());
+                    continue;
+                }
+
+                StringBuilder json = new StringBuilder();
+                json.append("{\n  \"type\": \"anvilous:smithing_repair\",\n")
+                        .append("  \"base\": { \"item\": \"").append(id).append("\" },\n")
+                        .append("  \"materials\": [\n");
+                for (int i = 0; i < materials.size(); i++) {
+                    json.append("    { \"item\": \"").append(materials.get(i))
+                            .append("\", \"percent\": ").append(percent).append(" }")
+                            .append(i < materials.size() - 1 ? ",\n" : "\n");
+                }
+                json.append("  ],\n  \"keep_enchantments\": true,\n  \"repair_cost\": \"reset\"\n}\n");
+
+                Files.writeString(out.resolve(id.getPath() + ".json"), json.toString());
+                written++;
+            }
+        } catch (IOException e) {
+            source.sendFailure(Component.literal("Could not write the pack: " + e.getMessage()));
+            return 0;
+        }
+
+        Anvilous.LOGGER.info("dump_repair: {} damageable items, {} written, {} with no material repair: {}",
+                damageable.size(), written, noMaterial.size(), noMaterial);
+
+        int finalWritten = written;
+        source.sendSuccess(() -> Component.literal(
+                damageable.size() + " damageable items, " + finalWritten + " recipes written to "
+                        + out + ", " + noMaterial.size() + " have no material repair"), false);
+        return 1;
     }
 
     /** The enchanting half of {@link #simulate}, driven through the same real menu. */
