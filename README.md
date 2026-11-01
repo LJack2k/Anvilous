@@ -2,8 +2,8 @@
 
 # Anvilous
 
-Repair your gear at the **smithing table**, with materials and amounts a datapack decides —
-and leave the anvil's experience bill behind.
+Repair, combine and enchant your gear at the **smithing table**, with materials and amounts a
+datapack decides — and leave the anvil's experience bill behind.
 
 **Minecraft 1.21.1 · NeoForge · client and server**
 
@@ -25,6 +25,22 @@ doesn't care.
 
 Both sides need the mod: recipes are synced to every client, and the smithing table filters
 its input slots against the client's own recipe list.
+
+## Recipe viewers
+
+Every recipe shows up in **JEI**, **EMI** and **REI**, each through a plugin of its own. None
+of them is required, and the jar carries no dependency on any: each plugin class is loaded
+only by the viewer that looks for it, so with none installed the mod does not know they exist.
+
+Three plugins rather than one and two bridges, because neither bridge would do. REI's, *REI
+Plugin Compatibilities*, is published for 1.16.5 Forge and nothing since. EMI's is a mixin
+into JEI, so it only forwards plugins JEI has already loaded — which means it does nothing in
+a pack that ships EMI alone, the common case.
+
+What they show is the same in all three, from the same code: the three input slots, the
+result, and the price as a stack count on the material slot, so a repair reads as "4 diamonds"
+and Sharpness V as "5 lapis" without a sentence. The categories share one set of translation
+keys, so the three cannot describe the same recipe differently.
 
 ## As an anvil replacement
 
@@ -232,6 +248,19 @@ prism_instance=C:/Users/you/AppData/Roaming/PrismLauncher/instances/Anvilous Dev
 
 `build` then runs `installToPrism`, which clears out older `Anvilous-*.jar` files and copies
 the new one in. Without the property the task is never registered, so the build is unchanged.
+
+### Running a viewer
+
+The dev runs start with JEI. `-Precipe_viewer=` picks another — `emi`, `rei`, or `both` for
+JEI and EMI together:
+
+```
+gradlew :neoforge:runClientJoin -Precipe_viewer=rei
+```
+
+Only the dev classpath changes; the published jar is the same either way. Inside the dev
+client, `/anvilous browse <category>` and `/anvilous browse_item <item>` open whichever viewer
+is installed, which is how the categories get screenshotted without anyone touching the mouse.
 
 ## License
 
