@@ -88,6 +88,20 @@ A built-in pack translates vanilla's own repair rules: `percent: 25`, `max_per_c
 repair material for each tier. That is exactly what an anvil gives you, minus the experience.
 Packs are expected to replace or extend it.
 
+## Building
+
+`gradlew build` produces the jar under `neoforge/build/libs/`.
+
+To have each build land in a launcher instance as well, create a `local.properties`
+next to `settings.gradle` (it is gitignored) with the instance's game directory:
+
+```properties
+prism_instance=C:/Users/you/AppData/Roaming/PrismLauncher/instances/Anvilous Dev/minecraft
+```
+
+`build` then runs `installToPrism`, which clears out older `Anvilous-*.jar` files and copies
+the new one in. Without the property the task is never registered, so the build is unchanged.
+
 ## License
 
 MIT
