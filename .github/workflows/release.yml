@@ -1,9 +1,9 @@
 name: Release
 
-# Fires when you push a git tag starting with "v" — e.g. v0.0.5.
-#   bump mod_version in gradle.properties to match, commit, then:
-#     git tag v0.0.5
-#     git push origin v0.0.5
+# Fires when you push a git tag starting with "v". The tag carries the MC line, because
+# every line lives in this one repo and two of them must not collide:
+#     git tag v0.1.0-mc1.21.1
+#     git push origin v0.1.0-mc1.21.1
 #
 # This workflow ONLY builds the jar and creates the GitHub Release. The
 # CurseForge + Modrinth uploads are separate workflows that run after this one
@@ -82,7 +82,10 @@ jobs:
           files: |
             **/build/libs/!(*-sources).jar
 
-          name: ${{ steps.props.outputs.modname }}-${{ steps.props.outputs.loaders }}-${{ steps.props.outputs.mc }}-${{ steps.props.outputs.modver }}.jar
+          # The GitHub Release title, which is the thing a player reads when they land
+          # on the Releases page. The jar attached to it already carries the loader and
+          # the exact filename, so the title does not repeat them.
+          name: ${{ steps.props.outputs.modname }} ${{ steps.props.outputs.modver }} for Minecraft ${{ steps.props.outputs.mc }}
           # +<mc> build-metadata keeps the version unique per MC line on Modrinth
           # (e.g. 1.2.0+1.21.1 vs 1.2.0+26.1), which requires unique version numbers.
           version: "${{ steps.props.outputs.modver }}+${{ steps.props.outputs.mc }}"
