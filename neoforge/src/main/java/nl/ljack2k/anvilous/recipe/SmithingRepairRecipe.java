@@ -14,6 +14,7 @@ import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.item.crafting.SmithingRecipe;
 import net.minecraft.world.item.crafting.SmithingRecipeInput;
 import net.minecraft.world.level.Level;
+import nl.ljack2k.anvilous.Config;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -141,20 +142,40 @@ public class SmithingRepairRecipe implements SmithingRecipe {
 
     /**
      * How many material items this craft takes: what is in the slot, capped by
-     * {@code max_per_craft}.
+     * {@code max_per_craft}, and — unless the pack has turned that off — by how many the
+     * repair actually uses.
      *
-     * <p>Note that vanilla's {@code SmithingMenu} removes exactly one item from the addition
-     * slot when the result is taken, so consuming more than one needs the menu taught to ask
-     * the recipe. Until then a craft restores the full stacked amount while paying for one.
+     * <p>Both {@link #assemble} and the {@code SmithingMenu} mixin call this, so what the
+     * result is worth and what it costs can never drift apart. Vanilla's menu removes exactly
+     * one item from the addition slot, which is why the mixin exists at all.
      */
     public int unitsConsumed(SmithingRecipeInput input) {
-        return Math.max(1, Math.min(input.addition().getCount(), this.maxPerCraft));
+        ItemStack tool = input.base();
+        int available = Math.min(input.addition().getCount(), this.maxPerCraft);
+
+        RepairMaterial material = this.materialFor(input.addition()).orElse(null);
+        if (material == null || !Config.exactMaterialCost()) {
+            return Math.max(1, available);
+        }
+
+        int perUnit = this.perUnitRestore(tool, material);
+        if (perUnit <= 0) {
+            return Math.max(1, available);
+        }
+
+        // Ceiling division: the last unit is only partly used, but it is still spent.
+        int needed = (tool.getDamageValue() + perUnit - 1) / perUnit;
+        return Math.max(1, Math.min(available, needed));
     }
 
-    /** Durability restored by {@code units} of {@code material}, as a share of max damage. */
+    /** Durability one material item restores: its percentage of the tool's maximum damage. */
+    private int perUnitRestore(ItemStack tool, RepairMaterial material) {
+        return (int) Math.ceil(tool.getMaxDamage() * (material.percent() / 100.0D));
+    }
+
+    /** Durability restored by {@code units} of {@code material}. */
     private int restoredBy(ItemStack tool, RepairMaterial material, int units) {
-        int perUnit = (int) Math.ceil(tool.getMaxDamage() * (material.percent() / 100.0D));
-        return perUnit * units;
+        return this.perUnitRestore(tool, material) * units;
     }
 
     @Override

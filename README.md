@@ -65,12 +65,24 @@ One file per tool or tool group, in `data/<namespace>/recipe/`:
 Materials stack. With `percent: 25` and four iron in the slot, one craft repairs 100% and
 consumes all four — up to whatever `max_per_craft` allows.
 
-A craft consumes everything in the slot that it is allowed to, even if the tool fills up
-before the last item is used. A config option for **partial consumption** — returning what
-wasn't needed — is planned but not written yet.
+A craft takes only the materials the repair actually uses. A pickaxe 391 points from full,
+with a stack of diamonds in the slot, costs one diamond — not four. The last material is
+still spent in full even when only part of it is needed.
+
+Set `exact_material_cost = false` in `config/anvilous-server.toml` to get the harsher rule
+instead: every craft consumes as much as it is allowed to, so that same pickaxe one point
+from full costs four diamonds to restore one durability.
 
 Vanilla's smithing menu removes exactly one item per craft, so this needs a mixin on
 `SmithingMenu`; it is in `nl.ljack2k.anvilous.mixin`.
+
+## Config
+
+`config/anvilous-server.toml`, synced from server to client:
+
+| Option | Default | Meaning |
+| --- | --- | --- |
+| `exact_material_cost` | `true` | Consume only as many materials as the repair needs. `false` consumes everything the recipe may take, even if the tool fills up first. |
 
 ### `repair_cost`
 

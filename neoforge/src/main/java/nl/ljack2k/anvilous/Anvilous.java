@@ -4,6 +4,7 @@ import com.mojang.logging.LogUtils;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.config.ModConfig;
 import nl.ljack2k.anvilous.recipe.AnvilousRecipes;
 import org.slf4j.Logger;
 
@@ -22,5 +23,6 @@ public class Anvilous {
 
     public Anvilous(IEventBus modBus, ModContainer container) {
         AnvilousRecipes.SERIALIZERS.register(modBus);
+        container.registerConfig(ModConfig.Type.SERVER, Config.SPEC);
     }
 }

@@ -9,10 +9,12 @@ import net.minecraft.world.inventory.SmithingMenu;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.SmithingRecipe;
+import net.minecraft.world.item.crafting.SmithingRecipeInput;
 import nl.ljack2k.anvilous.recipe.SmithingRepairRecipe;
 import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -21,17 +23,18 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * Lets one craft consume more than one material.
  *
  * <p>Vanilla's {@code onTake} shrinks each input slot by exactly 1, which is right for
- * {@code smithing_transform} but wrong for a repair that restores 25% per ingot and was told
- * four ingots were available. {@link SmithingRepairRecipe} already assembles the result from
- * the whole stack (capped by {@code max_per_craft}), so without this the player would get the
- * full repair while paying for a single item.
+ * {@code smithing_transform} but wrong for a repair that was assembled from the whole stack:
+ * without this, the player gets a four-diamond repair for one diamond.
  *
- * <p>Injected at TAIL rather than HEAD because the pre-take count is still recoverable there
- * — vanilla has removed exactly one — so no state has to be carried between injections.
+ * <p>How many to take is {@link SmithingRepairRecipe#unitsConsumed}, the same method that
+ * decides what the result is worth, so the cost and the value cannot drift apart.
  *
- * <p>The class extends {@link ItemCombinerMenu} purely so {@code inputSlots} is inherited:
+ * <p>The count has to be worked out at HEAD rather than TAIL: it depends on how damaged the
+ * tool is, and by TAIL vanilla has already emptied the base slot.
+ *
+ * <p>The class extends {@link ItemCombinerMenu} purely so {@code inputSlots} is inherited —
  * {@code @Shadow} only resolves members declared on the target class itself, and that field
- * lives on the superclass. The constructor is never called — Mixin needs it only to satisfy
+ * lives on the superclass. The constructor is never called; Mixin needs it only to satisfy
  * the compiler.
  */
 @Mixin(SmithingMenu.class)
@@ -47,10 +50,30 @@ public abstract class SmithingMenuMixin extends ItemCombinerMenu {
     @Nullable
     private RecipeHolder<SmithingRecipe> selectedRecipe;
 
-    @Inject(method = "onTake", at = @At("TAIL"))
-    private void anvilous$consumeStackedMaterial(Player player, ItemStack result, CallbackInfo ci) {
+    /** Materials to remove on top of the single one vanilla takes. */
+    @Unique
+    private int anvilous$extraToConsume;
+
+    @Inject(method = "onTake", at = @At("HEAD"))
+    private void anvilous$measureMaterialCost(Player player, ItemStack result, CallbackInfo ci) {
+        this.anvilous$extraToConsume = 0;
+
         if (this.selectedRecipe == null
                 || !(this.selectedRecipe.value() instanceof SmithingRepairRecipe recipe)) {
+            return;
+        }
+
+        SmithingRecipeInput input = new SmithingRecipeInput(
+                this.inputSlots.getItem(SmithingMenu.TEMPLATE_SLOT),
+                this.inputSlots.getItem(SmithingMenu.BASE_SLOT),
+                this.inputSlots.getItem(SmithingMenu.ADDITIONAL_SLOT));
+
+        this.anvilous$extraToConsume = recipe.unitsConsumed(input) - 1;
+    }
+
+    @Inject(method = "onTake", at = @At("TAIL"))
+    private void anvilous$consumeStackedMaterial(Player player, ItemStack result, CallbackInfo ci) {
+        if (this.anvilous$extraToConsume <= 0) {
             return;
         }
 
@@ -59,13 +82,8 @@ public abstract class SmithingMenuMixin extends ItemCombinerMenu {
             return;
         }
 
-        // +1 undoes vanilla's own shrink, giving the count the recipe assembled against.
-        int extra = Math.min(addition.getCount() + 1, recipe.maxPerCraft()) - 1;
-        if (extra <= 0) {
-            return;
-        }
-
-        addition.shrink(extra);
+        addition.shrink(this.anvilous$extraToConsume);
         this.inputSlots.setItem(SmithingMenu.ADDITIONAL_SLOT, addition);
+        this.anvilous$extraToConsume = 0;
     }
 }
