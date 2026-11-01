@@ -3,7 +3,9 @@
   "minVersion": "0.8.5",
   "package": "nl.ljack2k.anvilous.mixin",
   "compatibilityLevel": "JAVA_21",
-  "mixins": [],
+  "mixins": [
+    "SmithingMenuMixin"
+  ],
   "injectors": {
     "defaultRequire": 1
   }

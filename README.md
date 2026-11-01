@@ -60,9 +60,12 @@ One file per tool or tool group, in `data/<namespace>/recipe/`:
 Materials stack. With `percent: 25` and four iron in the slot, one craft repairs 100% and
 consumes all four — up to whatever `max_per_craft` allows.
 
-By default a craft consumes everything in the slot that it is allowed to, even if the tool
-fills up before the last item is used. A config option turns on **partial consumption**,
-which returns what wasn't needed.
+A craft consumes everything in the slot that it is allowed to, even if the tool fills up
+before the last item is used. A config option for **partial consumption** — returning what
+wasn't needed — is planned but not written yet.
+
+Vanilla's smithing menu removes exactly one item per craft, so this needs a mixin on
+`SmithingMenu`; it is in `nl.ljack2k.anvilous.mixin`.
 
 ### `repair_cost`
 
