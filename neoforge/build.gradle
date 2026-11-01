@@ -24,7 +24,23 @@ repositories {
         name = 'NeoForged'
         url = 'https://maven.neoforged.net/releases'
     }
+    maven {
+        name = 'BlameJared'
+        url = 'https://maven.blamejared.com/'
+        // JEI's own config library lives here too, under its own group.
+        content {
+            includeGroup 'mezz.jei'
+            includeGroupByRegex 'net\\.mezzdev.*'
+        }
+    }
     flatDir { dirs 'libs' }
+}
+
+dependencies {
+    // Dev-only, so the recipes can be looked at in a recipe browser the way a player
+    // would. Nothing compiles against it and it is not a dependency of the mod: the
+    // jar runs identically with JEI absent.
+    runtimeOnly "mezz.jei:jei-${minecraft_version}-neoforge:${jei_version}"
 }
 
 neoForge {
