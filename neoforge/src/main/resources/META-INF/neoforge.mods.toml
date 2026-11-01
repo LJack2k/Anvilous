@@ -8,6 +8,10 @@ version = "${mod_version}"
 displayName = "${mod_display_name}"
 authors = "${mod_authors}"
 description = '''${mod_description}'''
+# Served from the jar root (neoforge/src/main/resources/icon.png), generated from
+# branding/Anvilous_logo.png - regenerate the set rather than editing it in place.
+logoFile = "icon.png"
+logoBlur = true
 
 # Mixin config. The smithing menu has to be taught to consume more than one
 # material per craft, which vanilla's SmithingMenu hardcodes to 1.

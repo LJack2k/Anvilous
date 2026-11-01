@@ -1,3 +1,5 @@
+<img src="branding/icon-256.png" alt="" width="128" align="right">
+
 # Anvilous
 
 Repair your gear at the **smithing table**, with materials and amounts a datapack decides —
