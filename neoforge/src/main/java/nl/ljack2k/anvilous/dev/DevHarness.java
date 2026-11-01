@@ -116,6 +116,13 @@ public final class DevHarness {
                 ScreenshotRequestPayload.STREAM_CODEC,
                 (payload, context) -> context.enqueueWork(
                         () -> nl.ljack2k.anvilous.client.ClientScreenshot.take()));
+
+        event.registrar("1").playToClient(
+                ShowRecipesPayload.TYPE,
+                ShowRecipesPayload.STREAM_CODEC,
+                (payload, context) -> context.enqueueWork(
+                        () -> nl.ljack2k.anvilous.client.ClientRecipeBrowser.show(
+                                payload.isItem(), payload.what())));
     }
 
     @SubscribeEvent
@@ -236,6 +243,18 @@ public final class DevHarness {
         root.then(Commands.literal("dump_enchant")
                 .executes(ctx -> dumpEnchant(ctx.getSource())));
 
+        // Opens the client's recipe browser on one of our categories, or on everything an
+        // item takes part in - so a category can be screenshotted without taking the mouse.
+        root.then(Commands.literal("jei")
+                .then(Commands.argument("category", ResourceLocationArgument.id())
+                        .executes(ctx -> showRecipes(ctx.getSource(), false,
+                                ResourceLocationArgument.getId(ctx, "category")))));
+
+        root.then(Commands.literal("jei_item")
+                .then(Commands.argument("item", ResourceLocationArgument.id())
+                        .executes(ctx -> showRecipes(ctx.getSource(), true,
+                                ResourceLocationArgument.getId(ctx, "item")))));
+
         event.getDispatcher().register(root);
     }
 
@@ -311,6 +330,12 @@ public final class DevHarness {
         source.sendSuccess(() -> Component.literal(
                 damageable.size() + " damageable items, " + finalWritten + " recipes written to "
                         + out + ", " + noMaterial.size() + " have no material repair"), false);
+        return 1;
+    }
+
+    private static int showRecipes(CommandSourceStack source, boolean isItem, ResourceLocation what) {
+        PacketDistributor.sendToAllPlayers(new ShowRecipesPayload(isItem, what));
+        source.sendSuccess(() -> Component.literal("Recipe browser opened on " + what), false);
         return 1;
     }
 

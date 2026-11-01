@@ -37,9 +37,10 @@ repositories {
 }
 
 dependencies {
-    // Dev-only, so the recipes can be looked at in a recipe browser the way a player
-    // would. Nothing compiles against it and it is not a dependency of the mod: the
-    // jar runs identically with JEI absent.
+    // Compile against the API only, so the plugin can be written; at runtime the whole of
+    // JEI is on the dev classpath so it can be looked at. Neither is a dependency of the
+    // mod - the plugin class is never touched unless JEI itself loads it.
+    compileOnly "mezz.jei:jei-${minecraft_version}-neoforge-api:${jei_version}"
     runtimeOnly "mezz.jei:jei-${minecraft_version}-neoforge:${jei_version}"
 }
 
@@ -189,6 +190,7 @@ tasks.named('jar') {
     exclude 'nl/ljack2k/anvilous/dev/**'
     exclude 'nl/ljack2k/anvilous/client/DevClientWindow*'
     exclude 'nl/ljack2k/anvilous/client/ClientScreenshot*'
+    exclude 'nl/ljack2k/anvilous/client/ClientRecipeBrowser*'
 }
 
 // Drop the freshly built jar into a local launcher instance so a rebuild is

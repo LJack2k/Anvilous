@@ -1,0 +1,18 @@
+{
+  "gui.anvilous.category.repair": "Smithing Table Repair",
+  "gui.anvilous.category.combine": "Smithing Table Combining",
+  "gui.anvilous.category.enchant": "Smithing Table Enchanting",
+
+  "gui.anvilous.repair.per_item": "Restores %s%% per item",
+  "gui.anvilous.repair.full": "%s for a full repair",
+  "gui.anvilous.repair.several_crafts": "%s per craft, %s in all",
+  "gui.anvilous.keeps_enchantments": "Keeps enchantments, no XP",
+
+  "gui.anvilous.combine.durability": "Both durabilities added,",
+  "gui.anvilous.combine.bonus": "plus %s%% of the maximum",
+  "gui.anvilous.combine.enchantments": "Enchantments merged, no XP",
+
+  "gui.anvilous.enchant.cost": "%s items, at %s per level",
+  "gui.anvilous.enchant.cost_one": "1 item",
+  "gui.anvilous.enchant.no_experience": "Book used up, no XP"
+}
