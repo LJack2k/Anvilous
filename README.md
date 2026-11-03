@@ -195,9 +195,14 @@ None of them are a new balance. Every number in them was read out of the game ra
 decided by us, so what they do is move vanilla's own prices to a block that does not charge
 experience and does not get more expensive the more you use it.
 
-A pack replaces any of them by shipping a file at the same path: `data/anvilous/recipe/diamond_pickaxe.json`
-in a datapack wins over the built-in copy. It needs no thought about load order — the three
-sets are built-in datapacks sitting at the bottom of the stack, so anything else beats them.
+A pack replaces any of them by shipping a file at the same path:
+`data/anvilous/recipe/minecraft/diamond_pickaxe.json` in a datapack wins over the built-in
+copy. It needs no thought about load order — the three sets are built-in datapacks sitting at
+the bottom of the stack, so anything else beats them.
+
+The folder in that path is the item's namespace. Recipes are filed per namespace so that two
+mods owning a `steel_pickaxe` cannot collide, which they would if the filename were the item's
+path alone — and it means one mod's recipes are one folder, to keep or drop as a unit.
 
 All three sets come out of generators that ship with the mod, so a pack with its own tiers
 regenerates them rather than editing a hundred files. See **Pack-making commands** below.
@@ -223,6 +228,27 @@ That registers four commands under `/anvilous`, all operator-only:
 
 The three `dump_*` commands write into `<game dir>/anvilous-generated/defaults_<set>/`, laid
 out exactly as the mod's own packs are, so turning the output into a datapack is a folder copy.
+Recipes are filed under a folder per namespace — `recipe/minecraft/`, `recipe/mekanism/` — so a
+300-mod export is something you can read, and two mods sharing an item name cannot overwrite
+each other.
+
+Anything that is not vanilla also comes out carrying a `neoforge:conditions` block, so one
+generated pack can be shipped to every pack you make and each recipe switches itself on where
+it belongs:
+
+```json
+{
+  "neoforge:conditions": [
+    { "type": "neoforge:item_exists", "item": "mekanism:steel_pickaxe" }
+  ],
+  "type": "anvilous:smithing_repair",
+```
+
+Repair and combine key on the item, because that is the recipe's real dependency and mods do
+not keep their items in the jar you would guess — Mekanism's tools are in MekanismTools.
+Enchanting keys on `mod_loaded`, there being no `enchantment_exists` condition to use. Vanilla
+gets no condition, since it is always there. NeoForge evaluates these above the recipe
+serializer, so they work on Anvilous recipes without the mod doing anything.
 
 The point is what they read. They ask the loaded registries — `Item#isValidRepairItem` and
 each enchantment's `anvil_cost` and `supported_items` — not a table somebody typed. Run inside

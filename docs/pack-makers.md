@@ -66,6 +66,15 @@ so they cover every modded tool and enchantment your pack has, not just vanilla'
 lands in `<game dir>/anvilous-generated/defaults_<set>/`, laid out as a datapack already.
 Copy the folder, edit what you disagree with, ship it.
 
+Inside each set the recipes sit in a folder per namespace — `recipe/minecraft/`,
+`recipe/mekanism/`, `recipe/cataclysm/` — so you can read the export, and delete one mod's
+worth in one go.
+
+Every non-vanilla recipe comes out with a `neoforge:conditions` block on it, keyed on the item
+for repair and combine and on the mod for enchanting. That means **one generated pack is
+shippable to all of your packs**: a Mekanism recipe simply does not load where Mekanism is
+absent. Generate in your biggest pack and reuse the output in the rest.
+
 The three sets Anvilous ships were made by exactly these commands.
 
 Turn `commands` back off before release. They write files and no player needs them.
@@ -127,3 +136,10 @@ For everything else: if you have JEI, EMI or REI in the pack, every recipe shows
 - **Materials resolve to `c:` tags** wherever exactly one exists, so another mod's iron ingot
   repairs an iron pickaxe without anyone writing a file. Where no tag fits, the generator
   writes a plain item instead — a tag that doesn't exist matches nothing rather than erroring.
+- **A condition that skips a recipe says so only at debug level.** `Skipping loading recipe X
+  as its conditions were not met` is a debug line, invisible at the default log level, so a
+  recipe that quietly didn't load looks identical to one that isn't there. The visible signal
+  is the `Loaded N recipes` count.
+- **A recipe naming an item that doesn't exist doesn't crash anything.** It logs `Parsing error
+  loading recipe` and is skipped, and the rest of the pack loads. Conditions are there to keep
+  the log honest and the counts right, not to prevent a crash.

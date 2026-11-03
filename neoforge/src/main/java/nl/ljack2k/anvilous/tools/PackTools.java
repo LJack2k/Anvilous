@@ -155,7 +155,8 @@ public final class PackTools {
                 List<String> entries = asTagsWherePossible(materials, percent);
 
                 StringBuilder json = new StringBuilder();
-                json.append("{\n  \"type\": \"anvilous:smithing_repair\",\n")
+                json.append("{\n").append(itemCondition(id))
+                        .append("  \"type\": \"anvilous:smithing_repair\",\n")
                         .append("  \"base\": { \"item\": \"").append(id).append("\" },\n")
                         .append("  \"materials\": [\n");
                 for (int i = 0; i < entries.size(); i++) {
@@ -164,7 +165,7 @@ public final class PackTools {
                 }
                 json.append("  ],\n  \"keep_enchantments\": true,\n  \"repair_cost\": \"reset\"\n}\n");
 
-                Files.writeString(out.resolve(id.getPath() + ".json"), json.toString());
+                Files.writeString(recipeFile(out, id, ""), json.toString());
                 written++;
             }
         } catch (IOException e) {
@@ -204,13 +205,13 @@ public final class PackTools {
             Files.createDirectories(out);
             for (Item item : damageable) {
                 ResourceLocation id = BuiltInRegistries.ITEM.getKey(item);
-                Files.writeString(out.resolve("combine_" + id.getPath() + ".json"), """
+                Files.writeString(recipeFile(out, id, "combine_"), """
                         {
-                          "type": "anvilous:smithing_combine",
+                        %s  "type": "anvilous:smithing_combine",
                           "base": { "item": "%s" },
                           "repair_cost": "reset"
                         }
-                        """.formatted(id));
+                        """.formatted(itemCondition(id), id));
                 written++;
             }
         } catch (IOException e) {
@@ -244,6 +245,65 @@ public final class PackTools {
      */
     private static Path generated(String pack) {
         return generatedRoot().resolve(pack).resolve("data/anvilous/recipe");
+    }
+
+    /**
+     * Where one recipe file goes: a folder per namespace, under the pack's recipe root.
+     *
+     * <p>The namespace is load-bearing here, not decoration. These files were named after the
+     * item's path alone, which is unique in vanilla because vanilla is one namespace — but run
+     * the generator in a modpack and two mods owning a {@code steel_pickaxe} write the same
+     * filename, the second quietly winning. A folder per namespace cannot collide, because the
+     * namespace is exactly what makes an item id unique to begin with.
+     *
+     * <p>It also gives the export a shape a person can work with: one mod's recipes are one
+     * folder, to read, keep or delete as a unit.
+     */
+    private static Path recipeFile(Path packRoot, ResourceLocation id, String prefix) throws IOException {
+        Path dir = packRoot.resolve(id.getNamespace());
+        Files.createDirectories(dir);
+        return dir.resolve(prefix + id.getPath() + ".json");
+    }
+
+    /**
+     * A condition block making a recipe load only where its subject item exists.
+     *
+     * <p>NeoForge applies {@code neoforge:conditions} above the recipe serializer dispatch —
+     * {@code RecipeManager} decodes through {@code Recipe.CONDITIONAL_CODEC}, which wraps the
+     * dispatch — so this works on Anvilous recipe types without a line of code on our side,
+     * and the serializers never see the key.
+     *
+     * <p>Keyed on the item rather than the mod on purpose: the recipe's real dependency is the
+     * item, and mods do not keep their items in the jar you would guess. Mekanism's tools are
+     * in MekanismTools, Mystical Agriculture's in Agradditions; {@code item_exists} does not
+     * care which jar supplied it, and {@code mod_loaded} would get both wrong.
+     *
+     * <p>Vanilla items get no condition. They are always there, and a condition that can never
+     * be false is noise in 68 files.
+     */
+    private static String itemCondition(ResourceLocation id) {
+        if (id.getNamespace().equals("minecraft")) {
+            return "";
+        }
+        return "  \"neoforge:conditions\": [\n"
+                + "    { \"type\": \"neoforge:item_exists\", \"item\": \"" + id + "\" }\n"
+                + "  ],\n";
+    }
+
+    /**
+     * The same, for enchantments, which have no {@code enchantment_exists} condition to use.
+     *
+     * <p>So it falls back to the mod: an enchantment is registered by the mod that declares it,
+     * which makes {@code mod_loaded} a fair proxy here even though it would be the wrong tool
+     * for items. Vanilla enchantments get no condition, for the reason above.
+     */
+    private static String modCondition(String namespace) {
+        if (namespace.equals("minecraft")) {
+            return "";
+        }
+        return "  \"neoforge:conditions\": [\n"
+                + "    { \"type\": \"neoforge:mod_loaded\", \"modid\": \"" + namespace + "\" }\n"
+                + "  ],\n";
     }
 
 
@@ -319,9 +379,9 @@ public final class PackTools {
                 int anvilCost = enchantment.getAnvilCost();
                 int perLevel = Math.max(1, anvilCost / 2);
 
-                Files.writeString(out.resolve("enchant_" + id.getPath() + ".json"), """
+                Files.writeString(recipeFile(out, id, "enchant_"), """
                         {
-                          "type": "anvilous:smithing_enchant",
+                        %s  "type": "anvilous:smithing_enchant",
                           "enchantment": "%s",
                           "base": { "tag": "%s" },
                           "materials": [
@@ -329,7 +389,7 @@ public final class PackTools {
                           ],
                           "repair_cost": "reset"
                         }
-                        """.formatted(id, baseTag.get().location(),
+                        """.formatted(modCondition(id.getNamespace()), id, baseTag.get().location(),
                         materialEntry(enchantTier(anvilCost), perLevel)));
                 written++;
             }
